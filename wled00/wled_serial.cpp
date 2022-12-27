@@ -38,33 +38,33 @@ void updateBaudRate(uint32_t rate){
 
 // RGB LED data return as JSON array. Slow, but easy to use on the other end.
 void sendJSON(){
-  if (!pinManager.isPinAllocated(hardwareTX) || pinManager.getPinOwner(hardwareTX) == PinOwner::DebugOut) {
-    uint16_t used = strip.getLengthTotal();
-    Serial.write('[');
-    for (uint16_t i=0; i<used; i++) {
-      Serial.print(strip.getPixelColor(i));
-      if (i != used-1) Serial.write(',');
-    }
-    Serial.println("]");
-  }   
+  // if (!pinManager.isPinAllocated(hardwareTX) || pinManager.getPinOwner(hardwareTX) == PinOwner::DebugOut) {
+  //   uint16_t used = strip.getLengthTotal();
+  //   Serial.write('[');
+  //   for (uint16_t i=0; i<used; i++) {
+  //     Serial.print(strip.getPixelColor(i));
+  //     if (i != used-1) Serial.write(',');
+  //   }
+  //   Serial.println("]");
+  // }   
 }
 
 // RGB LED data returned as bytes in TPM2 format. Faster, and slightly less easy to use on the other end.
 void sendBytes(){
-  if (!pinManager.isPinAllocated(hardwareTX) || pinManager.getPinOwner(hardwareTX) == PinOwner::DebugOut) {
-    Serial.write(0xC9); Serial.write(0xDA);
-    uint16_t used = strip.getLengthTotal();
-    uint16_t len = used*3;
-    Serial.write(highByte(len));
-    Serial.write(lowByte(len));
-    for (uint16_t i=0; i < used; i++) {
-      uint32_t c = strip.getPixelColor(i);
-      Serial.write(qadd8(W(c), R(c))); //R, add white channel to RGB channels as a simple RGBW -> RGB map
-      Serial.write(qadd8(W(c), G(c))); //G
-      Serial.write(qadd8(W(c), B(c))); //B
-    }
-    Serial.write(0x36); Serial.write('\n');
-  }  
+  // if (!pinManager.isPinAllocated(hardwareTX) || pinManager.getPinOwner(hardwareTX) == PinOwner::DebugOut) {
+  //   Serial.write(0xC9); Serial.write(0xDA);
+  //   uint16_t used = strip.getLengthTotal();
+  //   uint16_t len = used*3;
+  //   Serial.write(highByte(len));
+  //   Serial.write(lowByte(len));
+  //   for (uint16_t i=0; i < used; i++) {
+  //     uint32_t c = strip.getPixelColor(i);
+  //     Serial.write(qadd8(W(c), R(c))); //R, add white channel to RGB channels as a simple RGBW -> RGB map
+  //     Serial.write(qadd8(W(c), G(c))); //G
+  //     Serial.write(qadd8(W(c), B(c))); //B
+  //   }
+  //   Serial.write(0x36); Serial.write('\n');
+  // }  
 }
 
 void handleSerial()
@@ -201,9 +201,9 @@ void handleSerial()
   }
   #endif
 
-  // If Continuous Serial Streaming is enabled, send new LED data as bytes
-  if (continuousSendLED && (lastUpdate != strip.getLastShow())){
-    sendBytes();
-    lastUpdate = strip.getLastShow();
-  }
+  // // If Continuous Serial Streaming is enabled, send new LED data as bytes
+  // if (continuousSendLED && (lastUpdate != strip.getLastShow())){
+  //   sendBytes();
+  //   lastUpdate = strip.getLastShow();
+  // }
 }

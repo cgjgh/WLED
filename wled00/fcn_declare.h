@@ -8,19 +8,6 @@
  * All globally accessible functions are declared here
  */
 
-//alexa.cpp
-void onAlexaChange(EspalexaDevice* dev);
-void alexaInit();
-void handleAlexa();
-void onAlexaChange(EspalexaDevice* dev);
-
-//blynk.cpp
-#ifndef WLED_DISABLE_BLYNK
-void initBlynk(const char* auth, const char* host, uint16_t port);
-void handleBlynk();
-void updateBlynk();
-#endif
-
 //button.cpp
 void shortPressAction(uint8_t b=0);
 void longPressAction(uint8_t b=0);
@@ -57,35 +44,6 @@ bool getJsonValue(const JsonVariant& element, DestType& destination, const Defau
 }
 
 
-//colors.cpp
-uint32_t color_blend(uint32_t,uint32_t,uint16_t,bool b16=false);
-uint32_t color_add(uint32_t,uint32_t);
-inline uint32_t colorFromRgbw(byte* rgbw) { return uint32_t((byte(rgbw[3]) << 24) | (byte(rgbw[0]) << 16) | (byte(rgbw[1]) << 8) | (byte(rgbw[2]))); }
-void colorHStoRGB(uint16_t hue, byte sat, byte* rgb); //hue, sat to rgb
-void colorKtoRGB(uint16_t kelvin, byte* rgb);
-void colorCTtoRGB(uint16_t mired, byte* rgb); //white spectrum to rgb
-void colorXYtoRGB(float x, float y, byte* rgb); // only defined if huesync disabled TODO
-void colorRGBtoXY(byte* rgb, float* xy); // only defined if huesync disabled TODO
-void colorFromDecOrHexString(byte* rgb, char* in);
-bool colorFromHexString(byte* rgb, const char* in);
-uint32_t colorBalanceFromKelvin(uint16_t kelvin, uint32_t rgb);
-uint16_t approximateKelvinFromRGB(uint32_t rgb);
-void setRandomColor(byte* rgb);
-uint8_t gamma8_cal(uint8_t b, float gamma);
-void calcGammaTable(float gamma);
-uint8_t gamma8(uint8_t b);
-uint32_t gamma32(uint32_t);
-
-//dmx.cpp
-void initDMX();
-void handleDMX();
-
-//e131.cpp
-void handleE131Packet(e131_packet_t* p, IPAddress clientIP, byte protocol);
-void handleArtnetPollReply(IPAddress ipAddress);
-void prepareArtnetPollReply(ArtPollReply* reply);
-void sendArtnetPollReply(ArtPollReply* reply, IPAddress ipAddress, uint16_t portAddress);
-
 //file.cpp
 bool handleFileRead(AsyncWebServerRequest*, String path);
 bool writeObjectToFileUsingId(const char* file, uint16_t id, JsonDocument* content);
@@ -94,14 +52,6 @@ bool readObjectFromFileUsingId(const char* file, uint16_t id, JsonDocument* dest
 bool readObjectFromFile(const char* file, const char* key, JsonDocument* dest);
 void updateFSInfo();
 void closeFile();
-
-//hue.cpp
-void handleHue();
-void reconnectHue();
-void onHueError(void* arg, AsyncClient* client, int8_t error);
-void onHueConnect(void* arg, AsyncClient* client);
-void sendHuePoll();
-void onHueData(void* arg, AsyncClient* client, void *data, size_t len);
 
 //improv.cpp
 void handleImprovPacket();
@@ -130,11 +80,9 @@ void handleIR();
 #include "ESPAsyncWebServer.h"
 #include "src/dependencies/json/ArduinoJson-v6.h"
 #include "src/dependencies/json/AsyncJson-v6.h"
-#include "FX.h"
 
 void deserializeSegment(JsonObject elem, byte it, byte presetId = 0);
 bool deserializeState(JsonObject root, byte callMode = CALL_MODE_DIRECT_CHANGE, byte presetId = 0);
-void serializeSegment(JsonObject& root, Segment& seg, byte id, bool forPreset = false, bool segmentBounds = true);
 void serializeState(JsonObject root, bool forPreset = false, bool includeBri = true, bool segmentBounds = true, bool selectedSegmentsOnly = false);
 void serializeInfo(JsonObject root);
 void serializeModeNames(JsonArray arr, const char *qstring);
@@ -143,26 +91,6 @@ void serveJson(AsyncWebServerRequest* request);
 #ifdef WLED_ENABLE_JSONLIVE
 bool serveLiveLeds(AsyncWebServerRequest* request, uint32_t wsClient = 0);
 #endif
-
-//led.cpp
-void setValuesFromSegment(uint8_t s);
-void setValuesFromMainSeg();
-void setValuesFromFirstSelectedSeg();
-void resetTimebase();
-void toggleOnOff();
-void applyBri();
-void applyFinalBri();
-void applyValuesToSelectedSegs();
-void colorUpdated(byte callMode);
-void stateUpdated(byte callMode);
-void updateInterfaces(uint8_t callMode);
-void handleTransitions();
-void handleNightlight();
-byte scaledBri(byte in);
-
-//lx_parser.cpp
-bool parseLx(int lxValue, byte* rgbw);
-void parseLxJson(int lxValue, byte segId, bool secondary);
 
 //mqtt.cpp
 bool initMqtt();
@@ -181,28 +109,6 @@ byte weekdayMondayFirst();
 void checkTimers();
 void calculateSunriseAndSunset();
 void setTimeFromAPI(uint32_t timein);
-
-//overlay.cpp
-void handleOverlayDraw();
-void _overlayAnalogCountdown();
-void _overlayAnalogClock();
-
-//playlist.cpp
-void shufflePlaylist();
-void unloadPlaylist();
-int16_t loadPlaylist(JsonObject playlistObject, byte presetId = 0);
-void handlePlaylist();
-void serializePlaylist(JsonObject obj);
-
-//presets.cpp
-void initPresetsFile();
-void handlePresets();
-bool applyPreset(byte index, byte callMode = CALL_MODE_DIRECT_CHANGE);
-inline bool applyTemporaryPreset() {return applyPreset(255);};
-void savePreset(byte index, const char* pname = nullptr, JsonObject saveobj = JsonObject());
-inline void saveTemporaryPreset() {savePreset(255);};
-void deletePreset(byte index);
-bool getPresetName(byte index, String& name); 
 
 //set.cpp
 bool isAsterisksOnly(const char* str, byte maxLen);
@@ -317,9 +223,6 @@ void userLoop();
 
 //util.cpp
 int getNumVal(const String* req, uint16_t pos);
-void parseNumber(const char* str, byte* val, byte minv=0, byte maxv=255);
-bool getVal(JsonVariant elem, byte* val, byte minv=0, byte maxv=255);
-bool updateVal(const char* req, const char* key, byte* val, byte minv=0, byte maxv=255);
 bool oappend(const char* txt); // append new c string to temp buffer efficiently
 bool oappendi(int i);          // append new number to temp buffer efficiently
 void sappend(char stype, const char* key, int val);
@@ -328,12 +231,7 @@ void prepareHostname(char* hostname);
 bool isAsterisksOnly(const char* str, byte maxLen);
 bool requestJSONBufferLock(uint8_t module=255);
 void releaseJSONBufferLock();
-uint8_t extractModeName(uint8_t mode, const char *src, char *dest, uint8_t maxLen);
-uint8_t extractModeSlider(uint8_t mode, uint8_t slider, char *dest, uint8_t maxLen, uint8_t *var = nullptr);
-int16_t extractModeDefaults(uint8_t mode, const char *segVar);
-uint16_t crc16(const unsigned char* data_p, size_t length);
-um_data_t* simulateSound(uint8_t simulationId);
-void enumerateLedmaps();
+
 
 #ifdef WLED_ADD_EEPROM_SUPPORT
 //wled_eeprom.cpp

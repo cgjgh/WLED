@@ -29,6 +29,9 @@
 #define WLED_DISABLE_HUESYNC     // saves 4kb
 #define WLED_DISABLE_INFRARED    // saves 12kb, there is no pin left for this on ESP8266-01
 #define WLED_DISABLE_MQTT
+#define WLED_DISABLE_WEBSOCKETS
+#define WLED_DISABLE_LOXONE
+#define WLED_DISABLE_2D
 
 #ifndef WLED_DISABLE_MQTT
   #define WLED_ENABLE_MQTT         // saves 12kb
@@ -37,7 +40,6 @@
 //#define WLED_ENABLE_DMX          // uses 3.5kb (use LEDPIN other than 2)
 //#define WLED_ENABLE_JSONLIVE     // peek LED output via /json/live (WS binary peek is always enabled)
 
-#define WLED_ENABLE_LOXONE
 #ifndef WLED_DISABLE_LOXONE
   #define WLED_ENABLE_LOXONE       // uses 1.2kb
 #endif
@@ -167,10 +169,7 @@ using PSRAMDynamicJsonDocument = BasicJsonDocument<PSRAM_Allocator>;
 
 #include "const.h"
 #include "fcn_declare.h"
-#include "NodeStruct.h"
 #include "pin_manager.h"
-#include "bus_manager.h"
-#include "FX.h"
 
 #ifndef CLIENT_SSID
   #define CLIENT_SSID DEFAULT_CLIENT_SSID
@@ -348,7 +347,6 @@ WLED_GLOBAL bool simplifiedUI          _INIT(false);   // enable simplified UI
 WLED_GLOBAL byte cacheInvalidate       _INIT(0);       // used to invalidate browser cache when switching from regular to simplified UI
 
 // Sync CONFIG
-WLED_GLOBAL NodesMap Nodes;
 WLED_GLOBAL bool nodeListEnabled _INIT(true);
 WLED_GLOBAL bool nodeBroadcastEnabled _INIT(true);
 
@@ -382,11 +380,6 @@ WLED_GLOBAL bool alexaEnabled _INIT(false);                       // enable devi
 WLED_GLOBAL char alexaInvocationName[33] _INIT("Light");          // speech control name of device. Choose something voice-to-text can understand
 WLED_GLOBAL byte alexaNumPresets _INIT(0);                        // number of presets to expose to Alexa, starting from preset 1, up to 9
 
-#ifndef WLED_DISABLE_BLYNK
-WLED_GLOBAL char blynkApiKey[36] _INIT("");                       // Auth token for Blynk server. If empty, no connection will be made
-WLED_GLOBAL char blynkHost[33] _INIT("blynk-cloud.com");          // Default Blynk host
-WLED_GLOBAL uint16_t blynkPort _INIT(80);                         // Default Blynk port
-#endif
 
 WLED_GLOBAL uint16_t realtimeTimeoutMs _INIT(2500);               // ms timeout of realtime mode before returning to normal mode
 WLED_GLOBAL int arlsOffset _INIT(0);                              // realtime LED offset
@@ -394,14 +387,7 @@ WLED_GLOBAL bool receiveDirect _INIT(true);                       // receive UDP
 WLED_GLOBAL bool arlsDisableGammaCorrection _INIT(true);          // activate if gamma correction is handled by the source
 WLED_GLOBAL bool arlsForceMaxBri _INIT(false);                    // enable to force max brightness if source has very dark colors that would be black
 
-#ifdef WLED_ENABLE_DMX
- #ifdef ESP8266
-  WLED_GLOBAL DMXESPSerial dmx;
- #else //ESP32
-  WLED_GLOBAL SparkFunDMX dmx;
- #endif
-WLED_GLOBAL uint16_t e131ProxyUniverse _INIT(0);                  // output this E1.31 (sACN) / ArtNet universe via MAX485 (0 = disabled)
-#endif
+
 WLED_GLOBAL uint16_t e131Universe _INIT(1);                       // settings for E1.31 (sACN) protocol (only DMX_MODE_MULTIPLE_* can span over consequtive universes)
 WLED_GLOBAL uint16_t e131Port _INIT(5568);                        // DMX in port. E1.31 default is 5568, Art-Net is 6454
 WLED_GLOBAL byte DMXMode _INIT(DMX_MODE_MULTIPLE_RGB);            // DMX mode (s.a.)
@@ -420,16 +406,6 @@ WLED_GLOBAL char mqttPass[65] _INIT("");                   // optional: password
 WLED_GLOBAL char mqttClientID[41] _INIT("");               // override the client ID
 WLED_GLOBAL uint16_t mqttPort _INIT(1883);
 
-#ifndef WLED_DISABLE_HUESYNC
-WLED_GLOBAL bool huePollingEnabled _INIT(false);           // poll hue bridge for light state
-WLED_GLOBAL uint16_t huePollIntervalMs _INIT(2500);        // low values (< 1sec) may cause lag but offer quicker response
-WLED_GLOBAL char hueApiKey[47] _INIT("api");               // key token will be obtained from bridge
-WLED_GLOBAL byte huePollLightId _INIT(1);                  // ID of hue lamp to sync to. Find the ID in the hue app ("about" section)
-WLED_GLOBAL IPAddress hueIP _INIT_N(((0, 0, 0, 0))); // IP address of the bridge
-WLED_GLOBAL bool hueApplyOnOff _INIT(true);
-WLED_GLOBAL bool hueApplyBri _INIT(true);
-WLED_GLOBAL bool hueApplyColor _INIT(true);
-#endif
 
 WLED_GLOBAL uint16_t serialBaud _INIT(1152); // serial baud rate, multiply by 100
 
@@ -467,16 +443,6 @@ WLED_GLOBAL bool correctPIN     _INIT(true);
 WLED_GLOBAL unsigned long lastEditTime _INIT(0);
 
 WLED_GLOBAL uint16_t userVar0 _INIT(0), userVar1 _INIT(0); //available for use in usermod
-
-#ifdef WLED_ENABLE_DMX
-  // dmx CONFIG
-  WLED_GLOBAL byte DMXChannels _INIT(7);        // number of channels per fixture
-  WLED_GLOBAL byte DMXFixtureMap[15] _INIT_N(({ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }));
-  // assigns the different channels to different functions. See wled21_dmx.ino for more information.
-  WLED_GLOBAL uint16_t DMXGap _INIT(10);          // gap between the fixtures. makes addressing easier because you don't have to memorize odd numbers when climbing up onto a rig.
-  WLED_GLOBAL uint16_t DMXStart _INIT(10);        // start address of the first fixture
-  WLED_GLOBAL uint16_t DMXStartLED _INIT(0);      // LED from which DMX fixtures start
-#endif
 
 // internal global variable declarations
 // wifi
@@ -602,10 +568,6 @@ WLED_GLOBAL char mqttStatusTopic[40] _INIT("");        // this must be global be
 
 // alexa udp
 WLED_GLOBAL String escapedMac;
-#ifndef WLED_DISABLE_ALEXA
-  WLED_GLOBAL Espalexa espalexa;
-  WLED_GLOBAL EspalexaDevice* espalexaDevice;
-#endif
 
 // dns server
 WLED_GLOBAL DNSServer dnsServer;
@@ -666,17 +628,6 @@ WLED_GLOBAL AsyncWebHandler *editHandler _INIT(nullptr);
 // udp interface objects
 WLED_GLOBAL WiFiUDP notifierUdp, rgbUdp, notifier2Udp;
 WLED_GLOBAL WiFiUDP ntpUdp;
-WLED_GLOBAL ESPAsyncE131 e131 _INIT_N(((handleE131Packet)));
-WLED_GLOBAL ESPAsyncE131 ddp  _INIT_N(((handleE131Packet)));
-WLED_GLOBAL bool e131NewData _INIT(false);
-
-// led fx library object
-WLED_GLOBAL BusManager busses _INIT(BusManager());
-WLED_GLOBAL WS2812FX strip _INIT(WS2812FX());
-WLED_GLOBAL BusConfig* busConfigs[WLED_MAX_BUSSES] _INIT({nullptr}); //temporary, to remember values from network callback until after
-WLED_GLOBAL bool doInitBusses _INIT(false);
-WLED_GLOBAL int8_t loadLedmap _INIT(-1);
-WLED_GLOBAL uint16_t ledMaps _INIT(0); // bitfield representation of available ledmaps
 
 // Usermod manager
 WLED_GLOBAL UsermodManager usermods _INIT(UsermodManager());

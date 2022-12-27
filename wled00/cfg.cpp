@@ -79,18 +79,18 @@ bool deserializeConfig(JsonObject doc, bool fromFS) {
   JsonObject hw = doc[F("hw")];
 
   // initialize LED pins and lengths prior to other HW (except for ethernet)
-  JsonObject hw_led = hw["led"];
+  // JsonObject hw_led = hw["led"];
 
-  uint8_t autoWhiteMode = RGBW_MODE_MANUAL_ONLY;
-  CJSON(strip.ablMilliampsMax, hw_led[F("maxpwr")]);
-  CJSON(strip.milliampsPerLed, hw_led[F("ledma")]);
-  Bus::setAutoWhiteMode(hw_led[F("rgbwm")] | 255);
-  CJSON(correctWB, hw_led["cct"]);
-  CJSON(cctFromRgb, hw_led[F("cr")]);
-  CJSON(strip.cctBlending, hw_led[F("cb")]);
-  Bus::setCCTBlend(strip.cctBlending);
-  strip.setTargetFps(hw_led["fps"]); //NOP if 0, default 42 FPS
-  CJSON(strip.useLedsArray, hw_led[F("ld")]);
+  // uint8_t autoWhiteMode = RGBW_MODE_MANUAL_ONLY;
+  // CJSON(strip.ablMilliampsMax, hw_led[F("maxpwr")]);
+  // CJSON(strip.milliampsPerLed, hw_led[F("ledma")]);
+  // Bus::setAutoWhiteMode(hw_led[F("rgbwm")] | 255);
+  // CJSON(correctWB, hw_led["cct"]);
+  // CJSON(cctFromRgb, hw_led[F("cr")]);
+  // CJSON(strip.cctBlending, hw_led[F("cb")]);
+  // Bus::setCCTBlend(strip.cctBlending);
+  // strip.setTargetFps(hw_led["fps"]); //NOP if 0, default 42 FPS
+  // CJSON(strip.useLedsArray, hw_led[F("ld")]);
 
   #ifndef WLED_DISABLE_2D
   // 2D Matrix Settings
@@ -129,66 +129,66 @@ bool deserializeConfig(JsonObject doc, bool fromFS) {
   }
   #endif
 
-  JsonArray ins = hw_led["ins"];
+  // JsonArray ins = hw_led["ins"];
   
-  if (fromFS || !ins.isNull()) {
-    uint8_t s = 0;  // bus iterator
-    if (fromFS) busses.removeAll(); // can't safely manipulate busses directly in network callback
-    uint32_t mem = 0;
-    bool busesChanged = false;
-    for (JsonObject elm : ins) {
-      if (s >= WLED_MAX_BUSSES) break;
-      uint8_t pins[5] = {255, 255, 255, 255, 255};
-      JsonArray pinArr = elm["pin"];
-      if (pinArr.size() == 0) continue;
-      pins[0] = pinArr[0];
-      uint8_t i = 0;
-      for (int p : pinArr) {
-        pins[i++] = p;
-        if (i>4) break;
-      }
+  // if (fromFS || !ins.isNull()) {
+  //   uint8_t s = 0;  // bus iterator
+  //   if (fromFS) busses.removeAll(); // can't safely manipulate busses directly in network callback
+  //   uint32_t mem = 0;
+  //   bool busesChanged = false;
+  //   for (JsonObject elm : ins) {
+  //     if (s >= WLED_MAX_BUSSES) break;
+  //     uint8_t pins[5] = {255, 255, 255, 255, 255};
+  //     JsonArray pinArr = elm["pin"];
+  //     if (pinArr.size() == 0) continue;
+  //     pins[0] = pinArr[0];
+  //     uint8_t i = 0;
+  //     for (int p : pinArr) {
+  //       pins[i++] = p;
+  //       if (i>4) break;
+  //     }
 
-      uint16_t length = elm["len"] | 1;
-      uint8_t colorOrder = (int)elm[F("order")];
-      uint8_t skipFirst = elm[F("skip")];
-      uint16_t start = elm["start"] | 0;
-      if (length==0 || start + length > MAX_LEDS) continue; // zero length or we reached max. number of LEDs, just stop
-      uint8_t ledType = elm["type"] | TYPE_WS2812_RGB;
-      bool reversed = elm["rev"];
-      bool refresh = elm["ref"] | false;
-      ledType |= refresh << 7; // hack bit 7 to indicate strip requires off refresh
-      uint8_t AWmode = elm[F("rgbwm")] | autoWhiteMode;
-      if (fromFS) {
-        BusConfig bc = BusConfig(ledType, pins, start, length, colorOrder, reversed, skipFirst, AWmode);
-        mem += BusManager::memUsage(bc);
-        if (mem <= MAX_LED_MEMORY && busses.getNumBusses() <= WLED_MAX_BUSSES) busses.add(bc);  // finalization will be done in WLED::beginStrip()
-      } else {
-        if (busConfigs[s] != nullptr) delete busConfigs[s];
-        busConfigs[s] = new BusConfig(ledType, pins, start, length, colorOrder, reversed, skipFirst, AWmode);
-        busesChanged = true;
-      }
-      s++;
-    }
-    doInitBusses = busesChanged;
-    // finalization done in beginStrip()
-  }
-  if (hw_led["rev"]) busses.getBus(0)->reversed = true; //set 0.11 global reversed setting for first bus
+  //     uint16_t length = elm["len"] | 1;
+  //     uint8_t colorOrder = (int)elm[F("order")];
+  //     uint8_t skipFirst = elm[F("skip")];
+  //     uint16_t start = elm["start"] | 0;
+  //     if (length==0 || start + length > MAX_LEDS) continue; // zero length or we reached max. number of LEDs, just stop
+  //     uint8_t ledType = elm["type"] | TYPE_WS2812_RGB;
+  //     bool reversed = elm["rev"];
+  //     bool refresh = elm["ref"] | false;
+  //     ledType |= refresh << 7; // hack bit 7 to indicate strip requires off refresh
+  //     uint8_t AWmode = elm[F("rgbwm")] | autoWhiteMode;
+  //     if (fromFS) {
+  //       BusConfig bc = BusConfig(ledType, pins, start, length, colorOrder, reversed, skipFirst, AWmode);
+  //       mem += BusManager::memUsage(bc);
+  //       if (mem <= MAX_LED_MEMORY && busses.getNumBusses() <= WLED_MAX_BUSSES) busses.add(bc);  // finalization will be done in WLED::beginStrip()
+  //     } else {
+  //       if (busConfigs[s] != nullptr) delete busConfigs[s];
+  //       busConfigs[s] = new BusConfig(ledType, pins, start, length, colorOrder, reversed, skipFirst, AWmode);
+  //       busesChanged = true;
+  //     }
+  //     s++;
+  //   }
+  //   doInitBusses = busesChanged;
+  //   // finalization done in beginStrip()
+  // }
+  // if (hw_led["rev"]) busses.getBus(0)->reversed = true; //set 0.11 global reversed setting for first bus
 
-  // read color order map configuration
-  JsonArray hw_com = hw[F("com")];
-  if (!hw_com.isNull()) {
-    ColorOrderMap com = {};
-    uint8_t s = 0;
-    for (JsonObject entry : hw_com) {
-      if (s > WLED_MAX_COLOR_ORDER_MAPPINGS) break;
-      uint16_t start = entry["start"] | 0;
-      uint16_t len = entry["len"] | 0;
-      uint8_t colorOrder = (int)entry[F("order")];
-      com.add(start, len, colorOrder);
-      s++;
-    }
-    busses.updateColorOrderMap(com);
-  }
+  // // read color order map configuration
+  // JsonArray hw_com = hw[F("com")];
+  // if (!hw_com.isNull()) {
+  //   ColorOrderMap com = {};
+  //   uint8_t s = 0;
+  //   for (JsonObject entry : hw_com) {
+  //     if (s > WLED_MAX_COLOR_ORDER_MAPPINGS) break;
+  //     uint16_t start = entry["start"] | 0;
+  //     uint16_t len = entry["len"] | 0;
+  //     uint8_t colorOrder = (int)entry[F("order")];
+  //     com.add(start, len, colorOrder);
+  //     s++;
+  //   }
+  //   busses.updateColorOrderMap(com);
+  // }
 
   // read multiple button configuration
   JsonObject btn_obj = hw["btn"];
@@ -323,96 +323,96 @@ bool deserializeConfig(JsonObject doc, bool fromFS) {
 
   //int hw_status_pin = hw[F("status")]["pin"]; // -1
 
-  JsonObject light = doc[F("light")];
-  CJSON(briMultiplier, light[F("scale-bri")]);
-  CJSON(strip.paletteBlend, light[F("pal-mode")]);
-  CJSON(autoSegments, light[F("aseg")]);
+  // JsonObject light = doc[F("light")];
+  // CJSON(briMultiplier, light[F("scale-bri")]);
+  // CJSON(strip.paletteBlend, light[F("pal-mode")]);
+  // CJSON(autoSegments, light[F("aseg")]);
 
-  float light_gc_bri = light["gc"]["bri"];
-  float light_gc_col = light["gc"]["col"]; // 2.8
-  if      (light_gc_bri > 1.5) gammaCorrectBri = true;
-  else if (light_gc_bri > 0.5) gammaCorrectBri = false;
-  if      (light_gc_col > 1.5) gammaCorrectCol = true;
-  else if (light_gc_col > 0.5) gammaCorrectCol = false;
+  // float light_gc_bri = light["gc"]["bri"];
+  // float light_gc_col = light["gc"]["col"]; // 2.8
+  // if      (light_gc_bri > 1.5) gammaCorrectBri = true;
+  // else if (light_gc_bri > 0.5) gammaCorrectBri = false;
+  // if      (light_gc_col > 1.5) gammaCorrectCol = true;
+  // else if (light_gc_col > 0.5) gammaCorrectCol = false;
 
-  JsonObject light_tr = light["tr"];
-  CJSON(fadeTransition, light_tr["mode"]);
-  int tdd = light_tr["dur"] | -1;
-  if (tdd >= 0) transitionDelay = transitionDelayDefault = tdd * 100;
-  CJSON(strip.paletteFade, light_tr["pal"]);
+  // JsonObject light_tr = light["tr"];
+  // CJSON(fadeTransition, light_tr["mode"]);
+  // int tdd = light_tr["dur"] | -1;
+  // if (tdd >= 0) transitionDelay = transitionDelayDefault = tdd * 100;
+  // CJSON(strip.paletteFade, light_tr["pal"]);
 
-  JsonObject light_nl = light["nl"];
-  CJSON(nightlightMode, light_nl["mode"]);
-  byte prev = nightlightDelayMinsDefault;
-  CJSON(nightlightDelayMinsDefault, light_nl["dur"]);
-  if (nightlightDelayMinsDefault != prev) nightlightDelayMins = nightlightDelayMinsDefault;
+  // JsonObject light_nl = light["nl"];
+  // CJSON(nightlightMode, light_nl["mode"]);
+  // byte prev = nightlightDelayMinsDefault;
+  // CJSON(nightlightDelayMinsDefault, light_nl["dur"]);
+  // if (nightlightDelayMinsDefault != prev) nightlightDelayMins = nightlightDelayMinsDefault;
 
-  CJSON(nightlightTargetBri, light_nl[F("tbri")]);
-  CJSON(macroNl, light_nl["macro"]);
+  // CJSON(nightlightTargetBri, light_nl[F("tbri")]);
+  // CJSON(macroNl, light_nl["macro"]);
 
-  JsonObject def = doc["def"];
-  CJSON(bootPreset, def["ps"]);
-  CJSON(turnOnAtBoot, def["on"]); // true
-  CJSON(briS, def["bri"]); // 128
+  // JsonObject def = doc["def"];
+  // CJSON(bootPreset, def["ps"]);
+  // CJSON(turnOnAtBoot, def["on"]); // true
+  // CJSON(briS, def["bri"]); // 128
 
-  JsonObject interfaces = doc["if"];
+   JsonObject interfaces = doc["if"];
 
-  JsonObject if_sync = interfaces["sync"];
-  CJSON(udpPort, if_sync[F("port0")]); // 21324
-  CJSON(udpPort2, if_sync[F("port1")]); // 65506
+  // JsonObject if_sync = interfaces["sync"];
+  // CJSON(udpPort, if_sync[F("port0")]); // 21324
+  // CJSON(udpPort2, if_sync[F("port1")]); // 65506
 
-  JsonObject if_sync_recv = if_sync["recv"];
-  CJSON(receiveNotificationBrightness, if_sync_recv["bri"]);
-  CJSON(receiveNotificationColor, if_sync_recv["col"]);
-  CJSON(receiveNotificationEffects, if_sync_recv["fx"]);
-  CJSON(receiveGroups, if_sync_recv["grp"]);
-  CJSON(receiveSegmentOptions, if_sync_recv["seg"]);
-  CJSON(receiveSegmentBounds, if_sync_recv["sb"]);
-  //! following line might be a problem if called after boot
-  receiveNotifications = (receiveNotificationBrightness || receiveNotificationColor || receiveNotificationEffects || receiveSegmentOptions);
+  // JsonObject if_sync_recv = if_sync["recv"];
+  // CJSON(receiveNotificationBrightness, if_sync_recv["bri"]);
+  // CJSON(receiveNotificationColor, if_sync_recv["col"]);
+  // CJSON(receiveNotificationEffects, if_sync_recv["fx"]);
+  // CJSON(receiveGroups, if_sync_recv["grp"]);
+  // CJSON(receiveSegmentOptions, if_sync_recv["seg"]);
+  // CJSON(receiveSegmentBounds, if_sync_recv["sb"]);
+  // //! following line might be a problem if called after boot
+  // receiveNotifications = (receiveNotificationBrightness || receiveNotificationColor || receiveNotificationEffects || receiveSegmentOptions);
 
-  JsonObject if_sync_send = if_sync["send"];
-  prev = notifyDirectDefault;
-  CJSON(notifyDirectDefault, if_sync_send[F("dir")]);
-  if (notifyDirectDefault != prev) notifyDirect = notifyDirectDefault;
-  CJSON(notifyButton, if_sync_send["btn"]);
-  CJSON(notifyAlexa, if_sync_send["va"]);
-  CJSON(notifyHue, if_sync_send["hue"]);
-  CJSON(notifyMacro, if_sync_send["macro"]);
-  CJSON(syncGroups, if_sync_send["grp"]);
-  if (if_sync_send[F("twice")]) udpNumRetries = 1; // import setting from 0.13 and earlier
-  CJSON(udpNumRetries, if_sync_send["ret"]);
+  // JsonObject if_sync_send = if_sync["send"];
+  // prev = notifyDirectDefault;
+  // CJSON(notifyDirectDefault, if_sync_send[F("dir")]);
+  // if (notifyDirectDefault != prev) notifyDirect = notifyDirectDefault;
+  // CJSON(notifyButton, if_sync_send["btn"]);
+  // CJSON(notifyAlexa, if_sync_send["va"]);
+  // CJSON(notifyHue, if_sync_send["hue"]);
+  // CJSON(notifyMacro, if_sync_send["macro"]);
+  // CJSON(syncGroups, if_sync_send["grp"]);
+  // if (if_sync_send[F("twice")]) udpNumRetries = 1; // import setting from 0.13 and earlier
+  // CJSON(udpNumRetries, if_sync_send["ret"]);
 
-  JsonObject if_nodes = interfaces["nodes"];
-  CJSON(nodeListEnabled, if_nodes[F("list")]);
-  CJSON(nodeBroadcastEnabled, if_nodes[F("bcast")]);
+  // JsonObject if_nodes = interfaces["nodes"];
+  // CJSON(nodeListEnabled, if_nodes[F("list")]);
+  // CJSON(nodeBroadcastEnabled, if_nodes[F("bcast")]);
 
-  JsonObject if_live = interfaces["live"];
-  CJSON(receiveDirect, if_live["en"]);
-  CJSON(useMainSegmentOnly, if_live[F("mso")]);
-  CJSON(e131Port, if_live["port"]); // 5568
-  if (e131Port == DDP_DEFAULT_PORT) e131Port = E131_DEFAULT_PORT; // prevent double DDP port allocation
-  CJSON(e131Multicast, if_live[F("mc")]);
+  // JsonObject if_live = interfaces["live"];
+  // CJSON(receiveDirect, if_live["en"]);
+  // CJSON(useMainSegmentOnly, if_live[F("mso")]);
+  // CJSON(e131Port, if_live["port"]); // 5568
+  // if (e131Port == DDP_DEFAULT_PORT) e131Port = E131_DEFAULT_PORT; // prevent double DDP port allocation
+  // CJSON(e131Multicast, if_live[F("mc")]);
 
-  JsonObject if_live_dmx = if_live[F("dmx")];
-  CJSON(e131Universe, if_live_dmx[F("uni")]);
-  CJSON(e131SkipOutOfSequence, if_live_dmx[F("seqskip")]);
-  CJSON(DMXAddress, if_live_dmx[F("addr")]);
-  if (!DMXAddress || DMXAddress > 510) DMXAddress = 1;
-  CJSON(DMXMode, if_live_dmx["mode"]);
+  // JsonObject if_live_dmx = if_live[F("dmx")];
+  // CJSON(e131Universe, if_live_dmx[F("uni")]);
+  // CJSON(e131SkipOutOfSequence, if_live_dmx[F("seqskip")]);
+  // CJSON(DMXAddress, if_live_dmx[F("addr")]);
+  // if (!DMXAddress || DMXAddress > 510) DMXAddress = 1;
+  // CJSON(DMXMode, if_live_dmx["mode"]);
 
-  tdd = if_live[F("timeout")] | -1;
-  if (tdd >= 0) realtimeTimeoutMs = tdd * 100;
-  CJSON(arlsForceMaxBri, if_live[F("maxbri")]);
-  CJSON(arlsDisableGammaCorrection, if_live[F("no-gc")]); // false
-  CJSON(arlsOffset, if_live[F("offset")]); // 0
+  // tdd = if_live[F("timeout")] | -1;
+  // if (tdd >= 0) realtimeTimeoutMs = tdd * 100;
+  // CJSON(arlsForceMaxBri, if_live[F("maxbri")]);
+  // CJSON(arlsDisableGammaCorrection, if_live[F("no-gc")]); // false
+  // CJSON(arlsOffset, if_live[F("offset")]); // 0
 
-  CJSON(alexaEnabled, interfaces["va"][F("alexa")]); // false
+  // CJSON(alexaEnabled, interfaces["va"][F("alexa")]); // false
 
-  CJSON(macroAlexaOn, interfaces["va"]["macros"][0]);
-  CJSON(macroAlexaOff, interfaces["va"]["macros"][1]);
+  // CJSON(macroAlexaOn, interfaces["va"]["macros"][0]);
+  // CJSON(macroAlexaOff, interfaces["va"]["macros"][1]);
 
-  CJSON(alexaNumPresets, interfaces["va"]["p"]);
+  // CJSON(alexaNumPresets, interfaces["va"]["p"]);
 
 #ifndef WLED_DISABLE_BLYNK
   const char* apikey = interfaces["blynk"][F("token")] | "Hidden";
@@ -559,7 +559,7 @@ bool deserializeConfig(JsonObject doc, bool fromFS) {
   if (fromFS) return needsSave;
   // if from /json/cfg
   doReboot = doc[F("rb")] | doReboot;
-  if (doInitBusses) return false; // no save needed, will do after bus init in wled.cpp loop
+ // if (doInitBusses) return false; // no save needed, will do after bus init in wled.cpp loop
   return (doc["sv"] | true);
 }
 
@@ -683,18 +683,18 @@ void serializeConfig() {
   }
   #endif
 
-  JsonObject hw = doc.createNestedObject("hw");
+   JsonObject hw = doc.createNestedObject("hw");
 
-  JsonObject hw_led = hw.createNestedObject("led");
-  hw_led[F("total")] = strip.getLengthTotal(); //no longer read, but provided for compatibility on downgrade
-  hw_led[F("maxpwr")] = strip.ablMilliampsMax;
-  hw_led[F("ledma")] = strip.milliampsPerLed;
-  hw_led["cct"] = correctWB;
-  hw_led[F("cr")] = cctFromRgb;
-  hw_led[F("cb")] = strip.cctBlending;
-  hw_led["fps"] = strip.getTargetFps();
-  hw_led[F("rgbwm")] = Bus::getAutoWhiteMode();    // global override
-  hw_led[F("ld")] = strip.useLedsArray;
+  // JsonObject hw_led = hw.createNestedObject("led");
+  // hw_led[F("total")] = strip.getLengthTotal(); //no longer read, but provided for compatibility on downgrade
+  // hw_led[F("maxpwr")] = strip.ablMilliampsMax;
+  // hw_led[F("ledma")] = strip.milliampsPerLed;
+  // hw_led["cct"] = correctWB;
+  // hw_led[F("cr")] = cctFromRgb;
+  // hw_led[F("cb")] = strip.cctBlending;
+  // hw_led["fps"] = strip.getTargetFps();
+  // hw_led[F("rgbwm")] = Bus::getAutoWhiteMode();    // global override
+  // hw_led[F("ld")] = strip.useLedsArray;
 
   #ifndef WLED_DISABLE_2D
   // 2D Matrix Settings
@@ -720,37 +720,37 @@ void serializeConfig() {
   }
   #endif
 
-  JsonArray hw_led_ins = hw_led.createNestedArray("ins");
+  // JsonArray hw_led_ins = hw_led.createNestedArray("ins");
 
-  for (uint8_t s = 0; s < busses.getNumBusses(); s++) {
-    Bus *bus = busses.getBus(s);
-    if (!bus || bus->getLength()==0) break;
-    JsonObject ins = hw_led_ins.createNestedObject();
-    ins["start"] = bus->getStart();
-    ins["len"] = bus->getLength();
-    JsonArray ins_pin = ins.createNestedArray("pin");
-    uint8_t pins[5];
-    uint8_t nPins = bus->getPins(pins);
-    for (uint8_t i = 0; i < nPins; i++) ins_pin.add(pins[i]);
-    ins[F("order")] = bus->getColorOrder();
-    ins["rev"] = bus->reversed;
-    ins[F("skip")] = bus->skippedLeds();
-    ins["type"] = bus->getType() & 0x7F;
-    ins["ref"] = bus->isOffRefreshRequired();
-    ins[F("rgbwm")] = bus->getAWMode();
-  }
+  // for (uint8_t s = 0; s < busses.getNumBusses(); s++) {
+  //   Bus *bus = busses.getBus(s);
+  //   if (!bus || bus->getLength()==0) break;
+  //   JsonObject ins = hw_led_ins.createNestedObject();
+  //   ins["start"] = bus->getStart();
+  //   ins["len"] = bus->getLength();
+  //   JsonArray ins_pin = ins.createNestedArray("pin");
+  //   uint8_t pins[5];
+  //   uint8_t nPins = bus->getPins(pins);
+  //   for (uint8_t i = 0; i < nPins; i++) ins_pin.add(pins[i]);
+  //   ins[F("order")] = bus->getColorOrder();
+  //   ins["rev"] = bus->reversed;
+  //   ins[F("skip")] = bus->skippedLeds();
+  //   ins["type"] = bus->getType() & 0x7F;
+  //   ins["ref"] = bus->isOffRefreshRequired();
+  //   ins[F("rgbwm")] = bus->getAWMode();
+  // }
 
-  JsonArray hw_com = hw.createNestedArray(F("com"));
-  const ColorOrderMap& com = busses.getColorOrderMap();
-  for (uint8_t s = 0; s < com.count(); s++) {
-    const ColorOrderMapEntry *entry = com.get(s);
-    if (!entry) break;
+  // JsonArray hw_com = hw.createNestedArray(F("com"));
+  // const ColorOrderMap& com = busses.getColorOrderMap();
+  // for (uint8_t s = 0; s < com.count(); s++) {
+  //   const ColorOrderMapEntry *entry = com.get(s);
+  //   if (!entry) break;
 
-    JsonObject co = hw_com.createNestedObject();
-    co["start"] = entry->start;
-    co["len"] = entry->len;
-    co[F("order")] = entry->colorOrder;
-  }
+  //   JsonObject co = hw_com.createNestedObject();
+  //   co["start"] = entry->start;
+  //   co["len"] = entry->len;
+  //   co[F("order")] = entry->colorOrder;
+  // }
 
   // button(s)
   JsonObject hw_btn = hw.createNestedObject("btn");
@@ -796,83 +796,83 @@ void serializeConfig() {
   //JsonObject hw_status = hw.createNestedObject("status");
   //hw_status["pin"] = -1;
 
-  JsonObject light = doc.createNestedObject(F("light"));
-  light[F("scale-bri")] = briMultiplier;
-  light[F("pal-mode")] = strip.paletteBlend;
-  light[F("aseg")] = autoSegments;
+  // JsonObject light = doc.createNestedObject(F("light"));
+  // light[F("scale-bri")] = briMultiplier;
+  // light[F("pal-mode")] = strip.paletteBlend;
+  // light[F("aseg")] = autoSegments;
 
-  JsonObject light_gc = light.createNestedObject("gc");
-  light_gc["bri"] = (gammaCorrectBri) ? 2.8 : 1.0;
-  light_gc["col"] = (gammaCorrectCol) ? 2.8 : 1.0;
+  // JsonObject light_gc = light.createNestedObject("gc");
+  // light_gc["bri"] = (gammaCorrectBri) ? 2.8 : 1.0;
+  // light_gc["col"] = (gammaCorrectCol) ? 2.8 : 1.0;
 
-  JsonObject light_tr = light.createNestedObject("tr");
-  light_tr["mode"] = fadeTransition;
-  light_tr["dur"] = transitionDelayDefault / 100;
-  light_tr["pal"] = strip.paletteFade;
+  // JsonObject light_tr = light.createNestedObject("tr");
+  // light_tr["mode"] = fadeTransition;
+  // light_tr["dur"] = transitionDelayDefault / 100;
+  // light_tr["pal"] = strip.paletteFade;
 
-  JsonObject light_nl = light.createNestedObject("nl");
-  light_nl["mode"] = nightlightMode;
-  light_nl["dur"] = nightlightDelayMinsDefault;
-  light_nl[F("tbri")] = nightlightTargetBri;
-  light_nl["macro"] = macroNl;
+  // JsonObject light_nl = light.createNestedObject("nl");
+  // light_nl["mode"] = nightlightMode;
+  // light_nl["dur"] = nightlightDelayMinsDefault;
+  // light_nl[F("tbri")] = nightlightTargetBri;
+  // light_nl["macro"] = macroNl;
 
-  JsonObject def = doc.createNestedObject("def");
-  def["ps"] = bootPreset;
-  def["on"] = turnOnAtBoot;
-  def["bri"] = briS;
+  // JsonObject def = doc.createNestedObject("def");
+  // def["ps"] = bootPreset;
+  // def["on"] = turnOnAtBoot;
+  // def["bri"] = briS;
 
-  JsonObject interfaces = doc.createNestedObject("if");
+   JsonObject interfaces = doc.createNestedObject("if");
 
-  JsonObject if_sync = interfaces.createNestedObject("sync");
-  if_sync[F("port0")] = udpPort;
-  if_sync[F("port1")] = udpPort2;
+  // JsonObject if_sync = interfaces.createNestedObject("sync");
+  // if_sync[F("port0")] = udpPort;
+  // if_sync[F("port1")] = udpPort2;
 
-  JsonObject if_sync_recv = if_sync.createNestedObject("recv");
-  if_sync_recv["bri"] = receiveNotificationBrightness;
-  if_sync_recv["col"] = receiveNotificationColor;
-  if_sync_recv["fx"]  = receiveNotificationEffects;
-  if_sync_recv["grp"] = receiveGroups;
-  if_sync_recv["seg"] = receiveSegmentOptions;
-  if_sync_recv["sb"]  = receiveSegmentBounds;
+  // JsonObject if_sync_recv = if_sync.createNestedObject("recv");
+  // if_sync_recv["bri"] = receiveNotificationBrightness;
+  // if_sync_recv["col"] = receiveNotificationColor;
+  // if_sync_recv["fx"]  = receiveNotificationEffects;
+  // if_sync_recv["grp"] = receiveGroups;
+  // if_sync_recv["seg"] = receiveSegmentOptions;
+  // if_sync_recv["sb"]  = receiveSegmentBounds;
 
-  JsonObject if_sync_send = if_sync.createNestedObject("send");
-  if_sync_send[F("dir")] = notifyDirect;
-  if_sync_send["btn"] = notifyButton;
-  if_sync_send["va"] = notifyAlexa;
-  if_sync_send["hue"] = notifyHue;
-  if_sync_send["macro"] = notifyMacro;
-  if_sync_send["grp"] = syncGroups;
-  if_sync_send["ret"] = udpNumRetries;
+  // JsonObject if_sync_send = if_sync.createNestedObject("send");
+  // if_sync_send[F("dir")] = notifyDirect;
+  // if_sync_send["btn"] = notifyButton;
+  // if_sync_send["va"] = notifyAlexa;
+  // if_sync_send["hue"] = notifyHue;
+  // if_sync_send["macro"] = notifyMacro;
+  // if_sync_send["grp"] = syncGroups;
+  // if_sync_send["ret"] = udpNumRetries;
 
-  JsonObject if_nodes = interfaces.createNestedObject("nodes");
-  if_nodes[F("list")] = nodeListEnabled;
-  if_nodes[F("bcast")] = nodeBroadcastEnabled;
+  // JsonObject if_nodes = interfaces.createNestedObject("nodes");
+  // if_nodes[F("list")] = nodeListEnabled;
+  // if_nodes[F("bcast")] = nodeBroadcastEnabled;
 
-  JsonObject if_live = interfaces.createNestedObject("live");
-  if_live["en"] = receiveDirect;
-  if_live[F("mso")] = useMainSegmentOnly;
-  if_live["port"] = e131Port;
-  if_live[F("mc")] = e131Multicast;
+  // JsonObject if_live = interfaces.createNestedObject("live");
+  // if_live["en"] = receiveDirect;
+  // if_live[F("mso")] = useMainSegmentOnly;
+  // if_live["port"] = e131Port;
+  // if_live[F("mc")] = e131Multicast;
 
-  JsonObject if_live_dmx = if_live.createNestedObject("dmx");
-  if_live_dmx[F("uni")] = e131Universe;
-  if_live_dmx[F("seqskip")] = e131SkipOutOfSequence;
-  if_live_dmx[F("addr")] = DMXAddress;
-  if_live_dmx["mode"] = DMXMode;
+  // JsonObject if_live_dmx = if_live.createNestedObject("dmx");
+  // if_live_dmx[F("uni")] = e131Universe;
+  // if_live_dmx[F("seqskip")] = e131SkipOutOfSequence;
+  // if_live_dmx[F("addr")] = DMXAddress;
+  // if_live_dmx["mode"] = DMXMode;
 
-  if_live[F("timeout")] = realtimeTimeoutMs / 100;
-  if_live[F("maxbri")] = arlsForceMaxBri;
-  if_live[F("no-gc")] = arlsDisableGammaCorrection;
-  if_live[F("offset")] = arlsOffset;
+  // if_live[F("timeout")] = realtimeTimeoutMs / 100;
+  // if_live[F("maxbri")] = arlsForceMaxBri;
+  // if_live[F("no-gc")] = arlsDisableGammaCorrection;
+  // if_live[F("offset")] = arlsOffset;
 
-  JsonObject if_va = interfaces.createNestedObject("va");
-  if_va[F("alexa")] = alexaEnabled;
+  // JsonObject if_va = interfaces.createNestedObject("va");
+  // if_va[F("alexa")] = alexaEnabled;
 
-  JsonArray if_va_macros = if_va.createNestedArray("macros");
-  if_va_macros.add(macroAlexaOn);
-  if_va_macros.add(macroAlexaOff);
+  // JsonArray if_va_macros = if_va.createNestedArray("macros");
+  // if_va_macros.add(macroAlexaOn);
+  // if_va_macros.add(macroAlexaOff);
 
-  if_va["p"] = alexaNumPresets;
+  // if_va["p"] = alexaNumPresets;
 
 #ifndef WLED_DISABLE_BLYNK
   JsonObject if_blynk = interfaces.createNestedObject("blynk");

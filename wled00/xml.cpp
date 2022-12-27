@@ -8,68 +8,68 @@
 //build XML response to HTTP /win API request
 void XML_response(AsyncWebServerRequest *request, char* dest)
 {
-  char sbuf[(dest == nullptr)?1024:1]; //allocate local buffer if none passed
-  obuf = (dest == nullptr)? sbuf:dest;
+  // char sbuf[(dest == nullptr)?1024:1]; //allocate local buffer if none passed
+  // obuf = (dest == nullptr)? sbuf:dest;
 
-  olen = 0;
-  oappend(SET_F("<?xml version=\"1.0\" ?><vs><ac>"));
-  oappendi((nightlightActive && nightlightMode > NL_MODE_SET) ? briT : bri);
-  oappend(SET_F("</ac>"));
+  // olen = 0;
+  // oappend(SET_F("<?xml version=\"1.0\" ?><vs><ac>"));
+  // oappendi((nightlightActive && nightlightMode > NL_MODE_SET) ? briT : bri);
+  // oappend(SET_F("</ac>"));
 
-  for (int i = 0; i < 3; i++)
-  {
-   oappend("<cl>");
-   oappendi(col[i]);
-   oappend("</cl>");
-  }
-  for (int i = 0; i < 3; i++)
-  {
-   oappend("<cs>");
-   oappendi(colSec[i]);
-   oappend("</cs>");
-  }
-  oappend(SET_F("<ns>"));
-  oappendi(notifyDirect);
-  oappend(SET_F("</ns><nr>"));
-  oappendi(receiveNotifications);
-  oappend(SET_F("</nr><nl>"));
-  oappendi(nightlightActive);
-  oappend(SET_F("</nl><nf>"));
-  oappendi(nightlightMode > NL_MODE_SET);
-  oappend(SET_F("</nf><nd>"));
-  oappendi(nightlightDelayMins);
-  oappend(SET_F("</nd><nt>"));
-  oappendi(nightlightTargetBri);
-  oappend(SET_F("</nt><fx>"));
-  oappendi(effectCurrent);
-  oappend(SET_F("</fx><sx>"));
-  oappendi(effectSpeed);
-  oappend(SET_F("</sx><ix>"));
-  oappendi(effectIntensity);
-  oappend(SET_F("</ix><fp>"));
-  oappendi(effectPalette);
-  oappend(SET_F("</fp><wv>"));
-  if (strip.hasWhiteChannel()) {
-   oappendi(col[3]);
-  } else {
-   oappend("-1");
-  }
-  oappend(SET_F("</wv><ws>"));
-  oappendi(colSec[3]);
-  oappend(SET_F("</ws><ps>"));
-  oappendi(currentPreset);
-  oappend(SET_F("</ps><cy>"));
-  oappendi(currentPlaylist >= 0);
-  oappend(SET_F("</cy><ds>"));
-  oappend(serverDescription);
-  if (realtimeMode)
-  {
-    oappend(SET_F(" (live)"));
-  }
-  oappend(SET_F("</ds><ss>"));
-  oappendi(strip.getFirstSelectedSegId());
-  oappend(SET_F("</ss></vs>"));
-  if (request != nullptr) request->send(200, "text/xml", obuf);
+  // for (int i = 0; i < 3; i++)
+  // {
+  //  oappend("<cl>");
+  //  oappendi(col[i]);
+  //  oappend("</cl>");
+  // }
+  // for (int i = 0; i < 3; i++)
+  // {
+  //  oappend("<cs>");
+  //  oappendi(colSec[i]);
+  //  oappend("</cs>");
+  // }
+  // oappend(SET_F("<ns>"));
+  // oappendi(notifyDirect);
+  // oappend(SET_F("</ns><nr>"));
+  // oappendi(receiveNotifications);
+  // oappend(SET_F("</nr><nl>"));
+  // oappendi(nightlightActive);
+  // oappend(SET_F("</nl><nf>"));
+  // oappendi(nightlightMode > NL_MODE_SET);
+  // oappend(SET_F("</nf><nd>"));
+  // oappendi(nightlightDelayMins);
+  // oappend(SET_F("</nd><nt>"));
+  // oappendi(nightlightTargetBri);
+  // oappend(SET_F("</nt><fx>"));
+  // oappendi(effectCurrent);
+  // oappend(SET_F("</fx><sx>"));
+  // oappendi(effectSpeed);
+  // oappend(SET_F("</sx><ix>"));
+  // oappendi(effectIntensity);
+  // oappend(SET_F("</ix><fp>"));
+  // oappendi(effectPalette);
+  // oappend(SET_F("</fp><wv>"));
+  // if (strip.hasWhiteChannel()) {
+  //  oappendi(col[3]);
+  // } else {
+  //  oappend("-1");
+  // }
+  // oappend(SET_F("</wv><ws>"));
+  // oappendi(colSec[3]);
+  // oappend(SET_F("</ws><ps>"));
+  // oappendi(currentPreset);
+  // oappend(SET_F("</ps><cy>"));
+  // oappendi(currentPlaylist >= 0);
+  // oappend(SET_F("</cy><ds>"));
+  // oappend(serverDescription);
+  // if (realtimeMode)
+  // {
+  //   oappend(SET_F(" (live)"));
+  // }
+  // oappend(SET_F("</ds><ss>"));
+  // oappendi(strip.getFirstSelectedSegId());
+  // oappend(SET_F("</ss></vs>"));
+  // if (request != nullptr) request->send(200, "text/xml", obuf);
 }
 
 //Deprecated, use of /json/state and presets recommended instead
@@ -359,111 +359,111 @@ void getSettingsJS(byte subPage, char* dest)
     }
   }
 
-  if (subPage == 2)
-  {
-    char nS[8];
+  // if (subPage == 2)
+  // {
+  //   char nS[8];
 
-    appendGPIOinfo();
+  //   appendGPIOinfo();
 
-    // set limits
-    oappend(SET_F("bLimits("));
-    oappend(itoa(WLED_MAX_BUSSES,nS,10));  oappend(",");
-    oappend(itoa(MAX_LEDS_PER_BUS,nS,10)); oappend(",");
-    oappend(itoa(MAX_LED_MEMORY,nS,10));   oappend(",");
-    oappend(itoa(MAX_LEDS,nS,10));
-    oappend(SET_F(");"));
+  //   // set limits
+  //   oappend(SET_F("bLimits("));
+  //   oappend(itoa(WLED_MAX_BUSSES,nS,10));  oappend(",");
+  //   oappend(itoa(MAX_LEDS_PER_BUS,nS,10)); oappend(",");
+  //   oappend(itoa(MAX_LED_MEMORY,nS,10));   oappend(",");
+  //   oappend(itoa(MAX_LEDS,nS,10));
+  //   oappend(SET_F(");"));
 
-    sappend('c',SET_F("MS"),autoSegments);
-    sappend('c',SET_F("CCT"),correctWB);
-    sappend('c',SET_F("CR"),cctFromRgb);
-    sappend('v',SET_F("CB"),strip.cctBlending);
-    sappend('v',SET_F("FR"),strip.getTargetFps());
-    sappend('v',SET_F("AW"),Bus::getAutoWhiteMode());
-    sappend('v',SET_F("LD"),strip.useLedsArray);
+  //   sappend('c',SET_F("MS"),autoSegments);
+  //   sappend('c',SET_F("CCT"),correctWB);
+  //   sappend('c',SET_F("CR"),cctFromRgb);
+  //   sappend('v',SET_F("CB"),strip.cctBlending);
+  //   sappend('v',SET_F("FR"),strip.getTargetFps());
+  //   sappend('v',SET_F("AW"),Bus::getAutoWhiteMode());
+  //   sappend('v',SET_F("LD"),strip.useLedsArray);
 
-    for (uint8_t s=0; s < busses.getNumBusses(); s++) {
-      Bus* bus = busses.getBus(s);
-      if (bus == nullptr) continue;
-      char lp[4] = "L0"; lp[2] = 48+s; lp[3] = 0; //ascii 0-9 //strip data pin
-      char lc[4] = "LC"; lc[2] = 48+s; lc[3] = 0; //strip length
-      char co[4] = "CO"; co[2] = 48+s; co[3] = 0; //strip color order
-      char lt[4] = "LT"; lt[2] = 48+s; lt[3] = 0; //strip type
-      char ls[4] = "LS"; ls[2] = 48+s; ls[3] = 0; //strip start LED
-      char cv[4] = "CV"; cv[2] = 48+s; cv[3] = 0; //strip reverse
-      char sl[4] = "SL"; sl[2] = 48+s; sl[3] = 0; //skip 1st LED
-      char rf[4] = "RF"; rf[2] = 48+s; rf[3] = 0; //off refresh
-      char aw[4] = "AW"; aw[2] = 48+s; aw[3] = 0; //auto white mode
-      char wo[4] = "WO"; wo[2] = 48+s; wo[3] = 0; //swap channels
-      oappend(SET_F("addLEDs(1);"));
-      uint8_t pins[5];
-      uint8_t nPins = bus->getPins(pins);
-      for (uint8_t i = 0; i < nPins; i++) {
-        lp[1] = 48+i;
-        if (pinManager.isPinOk(pins[i]) || bus->getType()>=TYPE_NET_DDP_RGB) sappend('v',lp,pins[i]);
-      }
-      sappend('v',lc,bus->getLength());
-      sappend('v',lt,bus->getType());
-      sappend('v',co,bus->getColorOrder() & 0x0F);
-      sappend('v',ls,bus->getStart());
-      sappend('c',cv,bus->reversed);
-      sappend('v',sl,bus->skippedLeds());
-      sappend('c',rf,bus->isOffRefreshRequired());
-      sappend('v',aw,bus->getAWMode());
-      sappend('v',wo,bus->getColorOrder() >> 4);
-    }
-    sappend('v',SET_F("MA"),strip.ablMilliampsMax);
-    sappend('v',SET_F("LA"),strip.milliampsPerLed);
-    if (strip.currentMilliamps)
-    {
-      sappends('m',SET_F("(\"pow\")[0]"),(char*)"");
-      olen -= 2; //delete ";
-      oappendi(strip.currentMilliamps);
-      oappend(SET_F("mA\";"));
-    }
+  //   for (uint8_t s=0; s < busses.getNumBusses(); s++) {
+  //     Bus* bus = busses.getBus(s);
+  //     if (bus == nullptr) continue;
+  //     char lp[4] = "L0"; lp[2] = 48+s; lp[3] = 0; //ascii 0-9 //strip data pin
+  //     char lc[4] = "LC"; lc[2] = 48+s; lc[3] = 0; //strip length
+  //     char co[4] = "CO"; co[2] = 48+s; co[3] = 0; //strip color order
+  //     char lt[4] = "LT"; lt[2] = 48+s; lt[3] = 0; //strip type
+  //     char ls[4] = "LS"; ls[2] = 48+s; ls[3] = 0; //strip start LED
+  //     char cv[4] = "CV"; cv[2] = 48+s; cv[3] = 0; //strip reverse
+  //     char sl[4] = "SL"; sl[2] = 48+s; sl[3] = 0; //skip 1st LED
+  //     char rf[4] = "RF"; rf[2] = 48+s; rf[3] = 0; //off refresh
+  //     char aw[4] = "AW"; aw[2] = 48+s; aw[3] = 0; //auto white mode
+  //     char wo[4] = "WO"; wo[2] = 48+s; wo[3] = 0; //swap channels
+  //     oappend(SET_F("addLEDs(1);"));
+  //     uint8_t pins[5];
+  //     uint8_t nPins = bus->getPins(pins);
+  //     for (uint8_t i = 0; i < nPins; i++) {
+  //       lp[1] = 48+i;
+  //       if (pinManager.isPinOk(pins[i]) || bus->getType()>=TYPE_NET_DDP_RGB) sappend('v',lp,pins[i]);
+  //     }
+  //     sappend('v',lc,bus->getLength());
+  //     sappend('v',lt,bus->getType());
+  //     sappend('v',co,bus->getColorOrder() & 0x0F);
+  //     sappend('v',ls,bus->getStart());
+  //     sappend('c',cv,bus->reversed);
+  //     sappend('v',sl,bus->skippedLeds());
+  //     sappend('c',rf,bus->isOffRefreshRequired());
+  //     sappend('v',aw,bus->getAWMode());
+  //     sappend('v',wo,bus->getColorOrder() >> 4);
+  //   }
+  //   sappend('v',SET_F("MA"),strip.ablMilliampsMax);
+  //   sappend('v',SET_F("LA"),strip.milliampsPerLed);
+  //   if (strip.currentMilliamps)
+  //   {
+  //     sappends('m',SET_F("(\"pow\")[0]"),(char*)"");
+  //     olen -= 2; //delete ";
+  //     oappendi(strip.currentMilliamps);
+  //     oappend(SET_F("mA\";"));
+  //   }
 
-    oappend(SET_F("resetCOM("));
-    oappend(itoa(WLED_MAX_COLOR_ORDER_MAPPINGS,nS,10));
-    oappend(SET_F(");"));
-    const ColorOrderMap& com = busses.getColorOrderMap();
-    for (uint8_t s=0; s < com.count(); s++) {
-      const ColorOrderMapEntry* entry = com.get(s);
-      if (entry == nullptr) break;
-      oappend(SET_F("addCOM("));
-      oappend(itoa(entry->start,nS,10));  oappend(",");
-      oappend(itoa(entry->len,nS,10));  oappend(",");
-      oappend(itoa(entry->colorOrder,nS,10));  oappend(");");
-    }
+  //   oappend(SET_F("resetCOM("));
+  //   oappend(itoa(WLED_MAX_COLOR_ORDER_MAPPINGS,nS,10));
+  //   oappend(SET_F(");"));
+  //   const ColorOrderMap& com = busses.getColorOrderMap();
+  //   for (uint8_t s=0; s < com.count(); s++) {
+  //     const ColorOrderMapEntry* entry = com.get(s);
+  //     if (entry == nullptr) break;
+  //     oappend(SET_F("addCOM("));
+  //     oappend(itoa(entry->start,nS,10));  oappend(",");
+  //     oappend(itoa(entry->len,nS,10));  oappend(",");
+  //     oappend(itoa(entry->colorOrder,nS,10));  oappend(");");
+  //   }
 
-    sappend('v',SET_F("CA"),briS);
+  //   sappend('v',SET_F("CA"),briS);
 
-    sappend('c',SET_F("BO"),turnOnAtBoot);
-    sappend('v',SET_F("BP"),bootPreset);
+  //   sappend('c',SET_F("BO"),turnOnAtBoot);
+  //   sappend('v',SET_F("BP"),bootPreset);
 
-    sappend('c',SET_F("GB"),gammaCorrectBri);
-    sappend('c',SET_F("GC"),gammaCorrectCol);
-    sappend('c',SET_F("TF"),fadeTransition);
-    sappend('v',SET_F("TD"),transitionDelayDefault);
-    sappend('c',SET_F("PF"),strip.paletteFade);
-    sappend('v',SET_F("BF"),briMultiplier);
-    sappend('v',SET_F("TB"),nightlightTargetBri);
-    sappend('v',SET_F("TL"),nightlightDelayMinsDefault);
-    sappend('v',SET_F("TW"),nightlightMode);
-    sappend('i',SET_F("PB"),strip.paletteBlend);
-    sappend('v',SET_F("RL"),rlyPin);
-    sappend('c',SET_F("RM"),rlyMde);
-    for (uint8_t i=0; i<WLED_MAX_BUTTONS; i++) {
-      oappend(SET_F("addBtn("));
-      oappend(itoa(i,nS,10));  oappend(",");
-      oappend(itoa(btnPin[i],nS,10)); oappend(",");
-      oappend(itoa(buttonType[i],nS,10));
-      oappend(SET_F(");"));
-    }
-    sappend('c',SET_F("IP"),disablePullUp);
-    sappend('v',SET_F("TT"),touchThreshold);
-    sappend('v',SET_F("IR"),irPin);
-    sappend('v',SET_F("IT"),irEnabled);
-    sappend('c',SET_F("MSO"),!irApplyToAllSelected);
-  }
+  //   sappend('c',SET_F("GB"),gammaCorrectBri);
+  //   sappend('c',SET_F("GC"),gammaCorrectCol);
+  //   sappend('c',SET_F("TF"),fadeTransition);
+  //   sappend('v',SET_F("TD"),transitionDelayDefault);
+  //   sappend('c',SET_F("PF"),strip.paletteFade);
+  //   sappend('v',SET_F("BF"),briMultiplier);
+  //   sappend('v',SET_F("TB"),nightlightTargetBri);
+  //   sappend('v',SET_F("TL"),nightlightDelayMinsDefault);
+  //   sappend('v',SET_F("TW"),nightlightMode);
+  //   sappend('i',SET_F("PB"),strip.paletteBlend);
+  //   sappend('v',SET_F("RL"),rlyPin);
+  //   sappend('c',SET_F("RM"),rlyMde);
+  //   for (uint8_t i=0; i<WLED_MAX_BUTTONS; i++) {
+  //     oappend(SET_F("addBtn("));
+  //     oappend(itoa(i,nS,10));  oappend(",");
+  //     oappend(itoa(btnPin[i],nS,10)); oappend(",");
+  //     oappend(itoa(buttonType[i],nS,10));
+  //     oappend(SET_F(");"));
+  //   }
+  //   sappend('c',SET_F("IP"),disablePullUp);
+  //   sappend('v',SET_F("TT"),touchThreshold);
+  //   sappend('v',SET_F("IR"),irPin);
+  //   sappend('v',SET_F("IT"),irEnabled);
+  //   sappend('c',SET_F("MSO"),!irApplyToAllSelected);
+  // }
 
   if (subPage == 3)
   {
@@ -723,7 +723,7 @@ void getSettingsJS(byte subPage, char* dest)
 
   if (subPage == 10) // 2D matrices
   {
-    sappend('v',SET_F("SOMP"),strip.isMatrix);
+   // sappend('v',SET_F("SOMP"),strip.isMatrix);
     #ifndef WLED_DISABLE_2D
     oappend(SET_F("resetPanels();"));
     if (strip.isMatrix) {
