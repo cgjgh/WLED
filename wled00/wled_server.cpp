@@ -105,36 +105,6 @@ void initServer()
   DefaultHeaders::Instance().addHeader(F("Access-Control-Allow-Origin"), "*");
   DefaultHeaders::Instance().addHeader(F("Access-Control-Allow-Methods"), "*");
   DefaultHeaders::Instance().addHeader(F("Access-Control-Allow-Headers"), "*");
-
-#ifdef WLED_ENABLE_WEBSOCKETS
-  server.on("/liveview", HTTP_GET, [](AsyncWebServerRequest *request){
-    if (handleIfNoneMatchCacheHeader(request)) return;
-    AsyncWebServerResponse *response = request->beginResponse_P(200, "text/html", PAGE_liveviewws, PAGE_liveviewws_length);
-    response->addHeader(FPSTR(s_content_enc),"gzip");
-    setStaticContentCacheHeaders(response);
-    request->send(response);
-    //request->send_P(200, "text/html", PAGE_liveviewws);
-  });
-  #ifndef WLED_DISABLE_2D
-  server.on("/liveview2D", HTTP_GET, [](AsyncWebServerRequest *request){
-    if (handleIfNoneMatchCacheHeader(request)) return;
-    AsyncWebServerResponse *response = request->beginResponse_P(200, "text/html", PAGE_liveviewws2D, PAGE_liveviewws2D_length);
-    response->addHeader(FPSTR(s_content_enc),"gzip");
-    setStaticContentCacheHeaders(response);
-    request->send(response);
-    //request->send_P(200, "text/html", PAGE_liveviewws);
-  });
-  #endif
-#else
-  server.on("/liveview", HTTP_GET, [](AsyncWebServerRequest *request){
-    if (handleIfNoneMatchCacheHeader(request)) return;
-    AsyncWebServerResponse *response = request->beginResponse_P(200, "text/html", PAGE_liveview, PAGE_liveview_length);
-    response->addHeader(FPSTR(s_content_enc),"gzip");
-    setStaticContentCacheHeaders(response);
-    request->send(response);
-    //request->send_P(200, "text/html", PAGE_liveview);
-  });
-#endif
   
   //settings page
   server.on("/settings", HTTP_GET, [](AsyncWebServerRequest *request){
@@ -594,15 +564,12 @@ void serveSettings(AsyncWebServerRequest* request, bool post)
   switch (subPage)
   {
     case 1:   response = request->beginResponse_P(200, "text/html", PAGE_settings_wifi, PAGE_settings_wifi_length); break;
-    case 2:   response = request->beginResponse_P(200, "text/html", PAGE_settings_leds, PAGE_settings_leds_length); break;
     case 3:   response = request->beginResponse_P(200, "text/html", PAGE_settings_ui,   PAGE_settings_ui_length);   break;
     case 4:   response = request->beginResponse_P(200, "text/html", PAGE_settings_sync, PAGE_settings_sync_length); break;
     case 5:   response = request->beginResponse_P(200, "text/html", PAGE_settings_time, PAGE_settings_time_length); break;
     case 6:   response = request->beginResponse_P(200, "text/html", PAGE_settings_sec,  PAGE_settings_sec_length);  break;
-    case 7:   response = request->beginResponse_P(200, "text/html", PAGE_settings_dmx,  PAGE_settings_dmx_length);  break;
     case 8:   response = request->beginResponse_P(200, "text/html", PAGE_settings_um,   PAGE_settings_um_length);   break;
     case 9:   response = request->beginResponse_P(200, "text/html", PAGE_update,        PAGE_update_length);        break;
-    case 10:  response = request->beginResponse_P(200, "text/html", PAGE_settings_2D,   PAGE_settings_2D_length);   break;
     case 251: {
       correctPIN = !strlen(settingsPIN); // lock if a pin is set
       createEditHandler(correctPIN);

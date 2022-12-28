@@ -219,33 +219,7 @@ function writeChunks(srcDir, specs, resultFile) {
 }
 
 writeHtmlGzipped("wled00/data/index.htm", "wled00/html_ui.h", 'index');
-writeHtmlGzipped("wled00/data/simple.htm", "wled00/html_simple.h", 'simple');
-/*
-writeChunks(
-  "wled00/data",
-  [
-    {
-      file: "simple.css",
-      name: "PAGE_simpleCss",
-      method: "gzip",
-      filter: "css-minify",
-    },
-    {
-      file: "simple.js",
-      name: "PAGE_simpleJs",
-      method: "gzip",
-      filter: "js-minify",
-    },
-    {
-      file: "simple.htm",
-      name: "PAGE_simple",
-      method: "gzip",
-      filter: "html-minify-ui",
-    }
-  ],
-  "wled00/html_simplex.h"
-);
-*/
+
 writeChunks(
   "wled00/data",
   [
@@ -267,18 +241,6 @@ writeChunks(
     {
       file: "settings_wifi.htm",
       name: "PAGE_settings_wifi",
-      method: "gzip",
-      filter: "html-minify",
-    },
-    {
-      file: "settings_leds.htm",
-      name: "PAGE_settings_leds",
-      method: "gzip",
-      filter: "html-minify",
-    },
-    {
-      file: "settings_dmx.htm",
-      name: "PAGE_settings_dmx",
       method: "gzip",
       filter: "html-minify",
     },
@@ -313,12 +275,6 @@ writeChunks(
       filter: "html-minify",
     },
     {
-      file: "settings_2D.htm",
-      name: "PAGE_settings_2D",
-      method: "gzip",
-      filter: "html-minify",
-    },
-    {
       file: "settings_pin.htm",
       name: "PAGE_settings_pin",
       method: "gzip",
@@ -349,21 +305,6 @@ writeChunks(
       mangle: (str) => str.replace(/\<h2\>.*\<\/body\>/gms, "<h2>%MSG%</body>"),
     },
     {
-      file: "dmxmap.htm",
-      name: "PAGE_dmxmap",
-      prepend: "=====(",
-      append: ")=====",
-      method: "plaintext",
-      filter: "html-minify",
-      mangle: (str) => `
-#ifdef WLED_ENABLE_DMX
-${str.replace(/function FM\(\)[ ]?\{/gms, "function FM() {%DMXVARS%\n")}
-#else
-const char PAGE_dmxmap[] PROGMEM = R"=====()=====";
-#endif
-`,
-    },
-    {
       file: "update.htm",
       name: "PAGE_update",
       method: "gzip",
@@ -378,24 +319,6 @@ const char PAGE_dmxmap[] PROGMEM = R"=====()=====";
     {
       file: "welcome.htm",
       name: "PAGE_welcome",
-      method: "gzip",
-      filter: "html-minify",
-    },
-    {
-      file: "liveview.htm",
-      name: "PAGE_liveview",
-      method: "gzip",
-      filter: "html-minify",
-    },
-    {
-      file: "liveviewws.htm",
-      name: "PAGE_liveviewws",
-      method: "gzip",
-      filter: "html-minify",
-    },
-    {
-      file: "liveviewws2D.htm",
-      name: "PAGE_liveviewws2D",
       method: "gzip",
       filter: "html-minify",
     },
