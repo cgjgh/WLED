@@ -87,27 +87,6 @@ void URL_response(AsyncWebServerRequest *request)
   oappend(s);
 
   oappend(SET_F("/win&A="));
-  oappendi(bri);
-  oappend(SET_F("&CL=h"));
-  for (int i = 0; i < 3; i++)
-  {
-   sprintf(s,"%02X", col[i]);
-   oappend(s); 
-  }
-  oappend(SET_F("&C2=h"));
-  for (int i = 0; i < 3; i++)
-  {
-   sprintf(s,"%02X", colSec[i]);
-   oappend(s);
-  }
-  oappend(SET_F("&FX="));
-  oappendi(effectCurrent);
-  oappend(SET_F("&SX="));
-  oappendi(effectSpeed);
-  oappend(SET_F("&IX="));
-  oappendi(effectIntensity);
-  oappend(SET_F("&FP="));
-  oappendi(effectPalette);
 
   obuf = sbuf;
   olen = 0;
@@ -468,62 +447,16 @@ void getSettingsJS(byte subPage, char* dest)
   if (subPage == 3)
   {
     sappends('s',SET_F("DS"),serverDescription);
-    sappend('c',SET_F("ST"),syncToggleReceive);
-  #ifdef WLED_ENABLE_SIMPLE_UI
-    sappend('c',SET_F("SU"),simplifiedUI);
-  #else
-    oappend(SET_F("toggle('Simple');"));    // hide Simplified UI settings
-  #endif
+  // #ifdef WLED_ENABLE_SIMPLE_UI
+  //   sappend('c',SET_F("SU"),simplifiedUI);
+  // #else
+  //   oappend(SET_F("toggle('Simple');"));    // hide Simplified UI settings
+  // #endif
   }
 
   if (subPage == 4)
   {
-    sappend('v',SET_F("UP"),udpPort);
-    sappend('v',SET_F("U2"),udpPort2);
-    sappend('v',SET_F("GS"),syncGroups);
-    sappend('v',SET_F("GR"),receiveGroups);
-
-    sappend('c',SET_F("RB"),receiveNotificationBrightness);
-    sappend('c',SET_F("RC"),receiveNotificationColor);
-    sappend('c',SET_F("RX"),receiveNotificationEffects);
-    sappend('c',SET_F("SO"),receiveSegmentOptions);
-    sappend('c',SET_F("SG"),receiveSegmentBounds);
-    sappend('c',SET_F("SD"),notifyDirectDefault);
-    sappend('c',SET_F("SB"),notifyButton);
-    sappend('c',SET_F("SH"),notifyHue);
-    sappend('c',SET_F("SM"),notifyMacro);
-    sappend('v',SET_F("UR"),udpNumRetries);
-
-    sappend('c',SET_F("NL"),nodeListEnabled);
-    sappend('c',SET_F("NB"),nodeBroadcastEnabled);
-
-    sappend('c',SET_F("RD"),receiveDirect);
-    sappend('c',SET_F("MO"),useMainSegmentOnly);
-    sappend('v',SET_F("EP"),e131Port);
-    sappend('c',SET_F("ES"),e131SkipOutOfSequence);
-    sappend('c',SET_F("EM"),e131Multicast);
-    sappend('v',SET_F("EU"),e131Universe);
-    sappend('v',SET_F("DA"),DMXAddress);
-    sappend('v',SET_F("DM"),DMXMode);
-    sappend('v',SET_F("ET"),realtimeTimeoutMs);
-    sappend('c',SET_F("FB"),arlsForceMaxBri);
-    sappend('c',SET_F("RG"),arlsDisableGammaCorrection);
-    sappend('v',SET_F("WO"),arlsOffset);
-    sappend('c',SET_F("AL"),alexaEnabled);
-    sappends('s',SET_F("AI"),alexaInvocationName);
-    sappend('c',SET_F("SA"),notifyAlexa);
-    sappend('v',SET_F("AP"),alexaNumPresets);
-    #ifdef WLED_DISABLE_ALEXA
-    oappend(SET_F("toggle('Alexa');"));  // hide Alexa settings
-    #endif
-    sappends('s',SET_F("BK"),(char*)((blynkEnabled)?SET_F("Hidden"):""));
-    #ifndef WLED_DISABLE_BLYNK
-    sappends('s',SET_F("BH"),blynkHost);
-    sappend('v',SET_F("BP"),blynkPort);
-    #else
-    oappend(SET_F("toggle('Blynk');"));    // hide BLYNK settings
-    #endif
-
+  
     #ifdef WLED_ENABLE_MQTT
     sappend('c',SET_F("MQ"),mqttEnabled);
     sappends('s',SET_F("MS"),mqttServer);
@@ -541,36 +474,6 @@ void getSettingsJS(byte subPage, char* dest)
     #else
     oappend(SET_F("toggle('MQTT');"));    // hide MQTT settings
     #endif
-
-    #ifndef WLED_DISABLE_HUESYNC
-    sappend('v',SET_F("H0"),hueIP[0]);
-    sappend('v',SET_F("H1"),hueIP[1]);
-    sappend('v',SET_F("H2"),hueIP[2]);
-    sappend('v',SET_F("H3"),hueIP[3]);
-    sappend('v',SET_F("HL"),huePollLightId);
-    sappend('v',SET_F("HI"),huePollIntervalMs);
-    sappend('c',SET_F("HP"),huePollingEnabled);
-    sappend('c',SET_F("HO"),hueApplyOnOff);
-    sappend('c',SET_F("HB"),hueApplyBri);
-    sappend('c',SET_F("HC"),hueApplyColor);
-    char hueErrorString[25];
-    switch (hueError)
-    {
-      case HUE_ERROR_INACTIVE     : strcpy_P(hueErrorString,PSTR("Inactive"));                break;
-      case HUE_ERROR_ACTIVE       : strcpy_P(hueErrorString,PSTR("Active"));                  break;
-      case HUE_ERROR_UNAUTHORIZED : strcpy_P(hueErrorString,PSTR("Unauthorized"));            break;
-      case HUE_ERROR_LIGHTID      : strcpy_P(hueErrorString,PSTR("Invalid light ID"));        break;
-      case HUE_ERROR_PUSHLINK     : strcpy_P(hueErrorString,PSTR("Link button not pressed")); break;
-      case HUE_ERROR_JSON_PARSING : strcpy_P(hueErrorString,PSTR("JSON parsing error"));      break;
-      case HUE_ERROR_TIMEOUT      : strcpy_P(hueErrorString,PSTR("Timeout"));                 break;
-      default: sprintf_P(hueErrorString,PSTR("Bridge Error %i"),hueError);
-    }
-    
-    sappends('m',SET_F("(\"sip\")[0]"),hueErrorString);
-    #else
-    oappend(SET_F("toggle('Hue');"));    // hide Hue Sync settings
-    #endif
-    sappend('v',SET_F("BD"),serialBaud);
   }
 
   if (subPage == 5)
@@ -591,25 +494,7 @@ void getSettingsJS(byte subPage, char* dest)
       sprintf_P(tm, PSTR("Sunrise: %02d:%02d Sunset: %02d:%02d"), hour(sunrise), minute(sunrise), hour(sunset), minute(sunset));
       sappends('m',SET_F("(\"times\")[1]"),tm);
     }
-    sappend('c',SET_F("OL"),overlayCurrent);
-    sappend('v',SET_F("O1"),overlayMin);
-    sappend('v',SET_F("O2"),overlayMax);
-    sappend('v',SET_F("OM"),analogClock12pixel);
-    sappend('c',SET_F("OS"),analogClockSecondsTrail);
-    sappend('c',SET_F("O5"),analogClock5MinuteMarks);
-
-    sappend('c',SET_F("CE"),countdownMode);
-    sappend('v',SET_F("CY"),countdownYear);
-    sappend('v',SET_F("CI"),countdownMonth);
-    sappend('v',SET_F("CD"),countdownDay);
-    sappend('v',SET_F("CH"),countdownHour);
-    sappend('v',SET_F("CM"),countdownMin);
-    sappend('v',SET_F("CS"),countdownSec);
-
-    sappend('v',SET_F("A0"),macroAlexaOn);
-    sappend('v',SET_F("A1"),macroAlexaOff);
-    sappend('v',SET_F("MC"),macroCountdown);
-    sappend('v',SET_F("MN"),macroNl);
+   
     for (uint8_t i=0; i<WLED_MAX_BUTTONS; i++) {
       oappend(SET_F("addRow("));
       oappend(itoa(i,tm,10));  oappend(",");
@@ -619,22 +504,6 @@ void getSettingsJS(byte subPage, char* dest)
       oappend(SET_F(");"));
     }
 
-    char k[4];
-    k[2] = 0; //Time macros
-    for (int i = 0; i<10; i++)
-    {
-      k[1] = 48+i; //ascii 0,1,2,3
-      if (i<8) { k[0] = 'H'; sappend('v',k,timerHours[i]); }
-      k[0] = 'N'; sappend('v',k,timerMinutes[i]);
-      k[0] = 'T'; sappend('v',k,timerMacro[i]);
-      k[0] = 'W'; sappend('v',k,timerWeekday[i]);
-      if (i<8) {
-        k[0] = 'M'; sappend('v',k,(timerMonth[i] >> 4) & 0x0F);
-				k[0] = 'P'; sappend('v',k,timerMonth[i] & 0x0F);
-        k[0] = 'D'; sappend('v',k,timerDay[i]);
-				k[0] = 'E'; sappend('v',k,timerDayEnd[i]);
-      }
-    }
   }
 
   if (subPage == 6)
@@ -657,34 +526,6 @@ void getSettingsJS(byte subPage, char* dest)
     oappend(serverDescription);
     oappend(SET_F("\";"));
   }
-  
-  #ifdef WLED_ENABLE_DMX // include only if DMX is enabled
-  if (subPage == 7)
-  {
-    sappend('v',SET_F("PU"),e131ProxyUniverse);
-    
-    sappend('v',SET_F("CN"),DMXChannels);
-    sappend('v',SET_F("CG"),DMXGap);
-    sappend('v',SET_F("CS"),DMXStart);
-    sappend('v',SET_F("SL"),DMXStartLED);
-    
-    sappend('i',SET_F("CH1"),DMXFixtureMap[0]);
-    sappend('i',SET_F("CH2"),DMXFixtureMap[1]);
-    sappend('i',SET_F("CH3"),DMXFixtureMap[2]);
-    sappend('i',SET_F("CH4"),DMXFixtureMap[3]);
-    sappend('i',SET_F("CH5"),DMXFixtureMap[4]);
-    sappend('i',SET_F("CH6"),DMXFixtureMap[5]);
-    sappend('i',SET_F("CH7"),DMXFixtureMap[6]);
-    sappend('i',SET_F("CH8"),DMXFixtureMap[7]);
-    sappend('i',SET_F("CH9"),DMXFixtureMap[8]);
-    sappend('i',SET_F("CH10"),DMXFixtureMap[9]);
-    sappend('i',SET_F("CH11"),DMXFixtureMap[10]);
-    sappend('i',SET_F("CH12"),DMXFixtureMap[11]);
-    sappend('i',SET_F("CH13"),DMXFixtureMap[12]);
-    sappend('i',SET_F("CH14"),DMXFixtureMap[13]);
-    sappend('i',SET_F("CH15"),DMXFixtureMap[14]);
-  }
-  #endif
 
   if (subPage == 8) //usermods
   {
@@ -719,38 +560,5 @@ void getSettingsJS(byte subPage, char* dest)
     oappend(SET_F(" build "));
     oappendi(VERSION);
     oappend(SET_F(")\";"));
-  }
-
-  if (subPage == 10) // 2D matrices
-  {
-   // sappend('v',SET_F("SOMP"),strip.isMatrix);
-    #ifndef WLED_DISABLE_2D
-    oappend(SET_F("resetPanels();"));
-    if (strip.isMatrix) {
-      sappend('v',SET_F("PH"),strip.panelH);
-      sappend('v',SET_F("PW"),strip.panelW);
-      sappend('v',SET_F("MPH"),strip.hPanels);
-      sappend('v',SET_F("MPV"),strip.vPanels);
-      sappend('v',SET_F("PB"),strip.matrix.bottomStart);
-      sappend('v',SET_F("PR"),strip.matrix.rightStart);
-      sappend('v',SET_F("PV"),strip.matrix.vertical);
-      sappend('c',SET_F("PS"),strip.matrix.serpentine);
-      // panels
-      for (uint8_t i=0; i<strip.hPanels*strip.vPanels; i++) {
-        char n[5];
-        oappend(SET_F("addPanel("));
-        oappend(itoa(i,n,10));
-        oappend(SET_F(");"));
-        char pO[8]; sprintf_P(pO, PSTR("P%d"), i);
-        uint8_t l = strlen(pO); pO[l+1] = 0;
-        pO[l] = 'B'; sappend('v',pO,strip.panel[i].bottomStart);
-        pO[l] = 'R'; sappend('v',pO,strip.panel[i].rightStart);
-        pO[l] = 'V'; sappend('v',pO,strip.panel[i].vertical);
-        pO[l] = 'S'; sappend('c',pO,strip.panel[i].serpentine);
-      }
-    }
-    #else
-    oappend(SET_F("gId(\"somp\").remove(1);")); // remove 2D option from dropdown
-    #endif
   }
 }

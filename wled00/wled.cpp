@@ -19,7 +19,6 @@ WLED::WLED()
 // turns all LEDs off and restarts ESP
 void WLED::reset()
 {
-  briT = 0;
   #ifdef WLED_ENABLE_WEBSOCKETS
   ws.closeAll(1012);
   #endif
@@ -43,8 +42,6 @@ void WLED::loop()
   handleTime();
   handleIR();        // 2nd call to function needed for ESP32 to return valid results -- should be good for ESP8266, too
   handleConnection();
-  handleSerial();
- // handleNotifications();
  
   userLoop();
 
@@ -77,8 +74,7 @@ void WLED::loop()
     yield();
   }
 
-  if (!realtimeMode || realtimeOverride || (realtimeMode && useMainSegmentOnly))  // block stuff if WARLS/Adalight is enabled
-  {
+  
     if (apActive) dnsServer.processNextRequest();
     #ifndef WLED_DISABLE_OTA
     if (WLED_CONNECTED && aOtaEnabled && !otaLock && correctPIN) ArduinoOTA.handle();
@@ -100,7 +96,7 @@ void WLED::loop()
     avgStripMillis += stripMillis;
     if (stripMillis > maxStripMillis) maxStripMillis = stripMillis;
     #endif
-  }
+  
 
   yield();
 #ifdef ESP8266
@@ -408,15 +404,15 @@ void WLED::initAP(bool resetAP)
   {
     DEBUG_PRINTLN(F("Init AP interfaces"));
     server.begin();
-    if (udpPort > 0 && udpPort != ntpLocalPort) {
-      udpConnected = notifierUdp.begin(udpPort);
-    }
-    if (udpRgbPort > 0 && udpRgbPort != ntpLocalPort && udpRgbPort != udpPort) {
-      udpRgbConnected = rgbUdp.begin(udpRgbPort);
-    }
-    if (udpPort2 > 0 && udpPort2 != ntpLocalPort && udpPort2 != udpPort && udpPort2 != udpRgbPort) {
-      udp2Connected = notifier2Udp.begin(udpPort2);
-    }
+    // if (udpPort > 0 && udpPort != ntpLocalPort) {
+    //   udpConnected = notifierUdp.begin(udpPort);
+    // }
+    // if (udpRgbPort > 0 && udpRgbPort != ntpLocalPort && udpRgbPort != udpPort) {
+    //   udpRgbConnected = rgbUdp.begin(udpRgbPort);
+    // }
+    // if (udpPort2 > 0 && udpPort2 != ntpLocalPort && udpPort2 != udpPort && udpPort2 != udpRgbPort) {
+    //   udp2Connected = notifier2Udp.begin(udpPort2);
+    // }
    
 
     dnsServer.setErrorReplyCode(DNSReplyCode::NoError);
@@ -602,13 +598,13 @@ void WLED::initInterfaces()
   }
   server.begin();
 
-  if (udpPort > 0 && udpPort != ntpLocalPort) {
-    udpConnected = notifierUdp.begin(udpPort);
-    if (udpConnected && udpRgbPort != udpPort)
-      udpRgbConnected = rgbUdp.begin(udpRgbPort);
-    if (udpConnected && udpPort2 != udpPort && udpPort2 != udpRgbPort)
-      udp2Connected = notifier2Udp.begin(udpPort2);
-  }
+  // if (udpPort > 0 && udpPort != ntpLocalPort) {
+  //   udpConnected = notifierUdp.begin(udpPort);
+  //   if (udpConnected && udpRgbPort != udpPort)
+  //     udpRgbConnected = rgbUdp.begin(udpRgbPort);
+  //   if (udpConnected && udpPort2 != udpPort && udpPort2 != udpRgbPort)
+  //     udp2Connected = notifier2Udp.begin(udpPort2);
+  // }
   if (ntpEnabled)
     ntpConnected = ntpUdp.begin(ntpLocalPort);
 

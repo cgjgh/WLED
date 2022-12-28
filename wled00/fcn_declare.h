@@ -1,8 +1,6 @@
 #ifndef WLED_FCN_DECLARE_H
 #define WLED_FCN_DECLARE_H
 #include <Arduino.h>
-#include "src/dependencies/espalexa/EspalexaDevice.h"
-#include "src/dependencies/e131/ESPAsyncE131.h"
 
 /*
  * All globally accessible functions are declared here
@@ -82,15 +80,12 @@ void handleIR();
 #include "src/dependencies/json/AsyncJson-v6.h"
 
 void deserializeSegment(JsonObject elem, byte it, byte presetId = 0);
-bool deserializeState(JsonObject root, byte callMode = CALL_MODE_DIRECT_CHANGE, byte presetId = 0);
+bool deserializeState(JsonObject root);
 void serializeState(JsonObject root, bool forPreset = false, bool includeBri = true, bool segmentBounds = true, bool selectedSegmentsOnly = false);
 void serializeInfo(JsonObject root);
 void serializeModeNames(JsonArray arr, const char *qstring);
 void serializeModeData(JsonObject root);
 void serveJson(AsyncWebServerRequest* request);
-#ifdef WLED_ENABLE_JSONLIVE
-bool serveLiveLeds(AsyncWebServerRequest* request, uint32_t wsClient = 0);
-#endif
 
 //mqtt.cpp
 bool initMqtt();
@@ -103,10 +98,6 @@ void sendNTPPacket();
 bool checkNTPResponse();    
 void updateLocalTime();
 void getTimeString(char* out);
-bool checkCountdown();
-void setCountdown();
-byte weekdayMondayFirst();
-void checkTimers();
 void calculateSunriseAndSunset();
 void setTimeFromAPI(uint32_t timein);
 
@@ -114,16 +105,6 @@ void setTimeFromAPI(uint32_t timein);
 bool isAsterisksOnly(const char* str, byte maxLen);
 void handleSettingsSet(AsyncWebServerRequest *request, byte subPage);
 bool handleSet(AsyncWebServerRequest *request, const String& req, bool apply=true);
-
-//udp.cpp
-void notify(byte callMode, bool followUp=false);
-uint8_t realtimeBroadcast(uint8_t type, IPAddress client, uint16_t length, byte *buffer, uint8_t bri=255, bool isRGBW=false);
-void realtimeLock(uint32_t timeoutMs, byte md = REALTIME_MODE_GENERIC);
-void exitRealtime();
-void handleNotifications();
-void setRealtimePixel(uint16_t i, byte r, byte g, byte b, byte w);
-void refreshNodeList();
-void sendSysInfoUDP();
 
 //network.cpp
 int getSignalQuality(int rssi);
@@ -263,10 +244,6 @@ void clearEEPROM();
   #define floor_t floor
 #endif
 
-//wled_serial.cpp
-void handleSerial();
-void updateBaudRate(uint32_t rate);
-
 //wled_server.cpp
 bool isIp(String str);
 void createEditHandler(bool enable);
@@ -277,7 +254,6 @@ void serveIndex(AsyncWebServerRequest* request);
 String msgProcessor(const String& var);
 void serveMessage(AsyncWebServerRequest* request, uint16_t code, const String& headl, const String& subl="", byte optionT=255);
 String settingsProcessor(const String& var);
-String dmxProcessor(const String& var);
 void serveSettings(AsyncWebServerRequest* request, bool post = false);
 void serveSettingsJS(AsyncWebServerRequest* request);
 

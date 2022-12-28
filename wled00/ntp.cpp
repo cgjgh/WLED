@@ -173,8 +173,7 @@ void handleTime() {
     toki.printTime(toki.getTime());
     #endif
     updateLocalTime();
-    checkTimers();
-    checkCountdown();
+    
   }
 }
 
@@ -262,7 +261,6 @@ bool checkNTPResponse()
   Serial.println(serverDelay);
   #endif
 
-  if (countdownTime - toki.second() > 0) countdownOverTriggered = false;
   // if time changed re-calculate sunrise/sunset
   updateLocalTime();
   calculateSunriseAndSunset();
@@ -292,37 +290,6 @@ void getTimeString(char* out)
   }
 }
 
-void setCountdown()
-{
-  if (currentTimezone != tzCurrent) updateTimezone();
-  countdownTime = tz->toUTC(getUnixTime(countdownHour, countdownMin, countdownSec, countdownDay, countdownMonth, countdownYear));
-  if (countdownTime - toki.second() > 0) countdownOverTriggered = false;
-}
-
-//returns true if countdown just over
-bool checkCountdown()
-{
-  // unsigned long n = toki.second();
-  // if (countdownMode) localTime = countdownTime - n + utcOffsetSecs;
-  // if (n > countdownTime) {
-  //   if (countdownMode) localTime = n - countdownTime + utcOffsetSecs;
-  //   if (!countdownOverTriggered)
-  //   {
-  //     if (macroCountdown != 0) applyPreset(macroCountdown);
-  //     countdownOverTriggered = true;
-  //     return true;
-  //   }
-  // }
-  // return false;
-}
-
-byte weekdayMondayFirst()
-{
-  byte wd = weekday(localTime) -1;
-  if (wd == 0) wd = 7;
-  return wd;
-}
-
 bool isTodayInDateRange(byte monthStart, byte dayStart, byte monthEnd, byte dayEnd)
 {
 	if (monthStart == 0 || dayStart == 0) return true;
@@ -347,63 +314,6 @@ bool isTodayInDateRange(byte monthStart, byte dayStart, byte monthEnd, byte dayE
 	//start month and end month are the same
 	if (dayEnd < dayStart) return (m != monthStart || (d <= dayEnd || d >= dayStart)); //all year, except the designated days in this month
 	return (m == monthStart && d >= dayStart && d <= dayEnd); //just the designated days this month
-}
-
-void checkTimers()
-{
-  // if (lastTimerMinute != minute(localTime)) //only check once a new minute begins
-  // {
-  //   lastTimerMinute = minute(localTime);
-
-  //   // re-calculate sunrise and sunset just after midnight
-  //   if (!hour(localTime) && minute(localTime)==1) calculateSunriseAndSunset();
-
-  //   DEBUG_PRINTF("Local time: %02d:%02d\n", hour(localTime), minute(localTime));
-  //   for (uint8_t i = 0; i < 8; i++)
-  //   {
-  //     if (timerMacro[i] != 0
-  //         && (timerWeekday[i] & 0x01) //timer is enabled
-  //         && (timerHours[i] == hour(localTime) || timerHours[i] == 24) //if hour is set to 24, activate every hour 
-  //         && timerMinutes[i] == minute(localTime)
-  //         && ((timerWeekday[i] >> weekdayMondayFirst()) & 0x01) //timer should activate at current day of week
-  //         && isTodayInDateRange(((timerMonth[i] >> 4) & 0x0F), timerDay[i], timerMonth[i] & 0x0F, timerDayEnd[i])
-  //        )
-  //     {
-  //       unloadPlaylist();
-  //       applyPreset(timerMacro[i]);
-  //     }
-  //   }
-  //   // sunrise macro
-  //   if (sunrise) {
-  //     time_t tmp = sunrise + timerMinutes[8]*60;  // NOTE: may not be ok
-  //     DEBUG_PRINTF("Trigger time: %02d:%02d\n", hour(tmp), minute(tmp));
-  //     if (timerMacro[8] != 0
-  //         && hour(tmp) == hour(localTime)
-  //         && minute(tmp) == minute(localTime)
-  //         && (timerWeekday[8] & 0x01) //timer is enabled
-  //         && ((timerWeekday[8] >> weekdayMondayFirst()) & 0x01)) //timer should activate at current day of week
-  //     {
-  //       unloadPlaylist();
-  //       applyPreset(timerMacro[8]);
-  //       DEBUG_PRINTF("Sunrise macro %d triggered.",timerMacro[8]);
-  //     }
-  //   }
-  //   // sunset macro
-  //   if (sunset) {
-  //     time_t tmp = sunset + timerMinutes[9]*60;  // NOTE: may not be ok
-  //     DEBUG_PRINTF("Trigger time: %02d:%02d\n", hour(tmp), minute(tmp));
-  //     if (timerMacro[9] != 0
-  //         && hour(tmp) == hour(localTime)
-  //         && minute(tmp) == minute(localTime)
-  //         && (timerWeekday[9] & 0x01) //timer is enabled
-  //         && ((timerWeekday[9] >> weekdayMondayFirst()) & 0x01)) //timer should activate at current day of week
-  //     {
-  //       unloadPlaylist();
-  //       applyPreset(timerMacro[9]);
-  //       DEBUG_PRINTF("Sunset macro %d triggered.",timerMacro[9]);
-  //     }
-  //   }
-  // }
 }
 
 #define ZENITH -0.83
