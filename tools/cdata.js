@@ -296,6 +296,14 @@ writeChunks(
         str.replace(/fetch\("http\:\/\/.*\/win/gms, 'fetch("/win'),
     },
     {
+      file: "relay.htm",
+      name: "PAGE_relay",
+      method: "gzip",
+      filter: "html-minify",
+      mangle: (str) =>
+        str.replace(/fetch\("http\:\/\/.*\/win/gms, 'fetch("/win'),
+    },
+    {
       file: "msg.htm",
       name: "PAGE_msg",
       prepend: "=====(",

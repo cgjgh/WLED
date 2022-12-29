@@ -67,6 +67,8 @@
 
 // Library inclusions.
 #include <Arduino.h>
+#include <NoDelay.h>
+
 #ifdef ESP8266
   #include <ESP8266WiFi.h>
   #include <ESP8266mDNS.h>
@@ -414,6 +416,12 @@ WLED_GLOBAL byte optionType;
 WLED_GLOBAL bool doSerializeConfig _INIT(false);        // flag to initiate saving of config
 WLED_GLOBAL bool doReboot          _INIT(false);        // flag to initiate reboot from async handlers
 WLED_GLOBAL bool doPublishMqtt     _INIT(false);
+
+// relay
+
+WLED_GLOBAL byte ledState _INIT(LOW);
+WLED_GLOBAL byte cmd _INIT(0);
+WLED_GLOBAL byte blinkCounter _INIT(0);
 
 // status led
 #if defined(STATUSLED)

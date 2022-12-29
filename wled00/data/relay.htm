@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport"/>
+	<title>Relay</title>
+	<script>
+		strA = "";
+	  function send()
+	  {
+		nocache = "&nocache=" + Math.random() * 1000000;
+		var request = new XMLHttpRequest();
+		// send HTTP request
+		request.open("GET", "win/" + strA +nocache, true);
+		request.send(null);
+		strA = "";
+	  }
+	  function forward()
+	  {
+		strA = "&CM=1";
+		send();
+	  }
+	  function reverse()
+	  {
+		strA = "&CM=2";
+		send();
+	  }
+	  function up()
+	  {
+		strA = "&CM=3";
+		send();
+	  }
+	  function down()
+	  {
+		strA = "&CM=4";
+		send();
+	  }
+	</script>
+	<style>
+		body {
+			text-align: center;
+			background: #222;
+			height: 100px;
+			margin: 0;
+		}
+		html {
+			--h: 9vh;
+		}
+		button {
+			background: #333;
+			color: #fff;
+			font-family: Verdana, Helvetica, sans-serif;
+			display: block;
+			border: 1px solid #333;
+			border-radius: var(--h);
+			font-size: 6vmin;
+			height: var(--h);
+			width: calc(50% - 40px);
+			margin: 2vh auto 0;
+			cursor: pointer;
+		}
+	</style>
+</head>
+<body onload="S()">
+<button type="submit" onclick="forward()">Forward</button>
+<button type="submit" onclick="reverse()">Reverse</button>
+<button type="submit" onclick="up()">Up</button>
+<button type="submit" onclick="down()">Down/Stop</button>
+</body>
+</html>

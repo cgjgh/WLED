@@ -201,6 +201,11 @@ void registerUsermods();
 void userSetup();
 void userConnected();
 void userLoop();
+void forward();
+void reverse();
+void up();
+void down();
+
 
 //util.cpp
 int getNumVal(const String* req, uint16_t pos);

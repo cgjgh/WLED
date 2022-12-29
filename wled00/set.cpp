@@ -311,6 +311,24 @@ void handleSettingsSet(AsyncWebServerRequest *request, byte subPage)
 //HTTP API request parser
 bool handleSet(AsyncWebServerRequest *request, const String& req, bool apply)
 {
+ if (!(req.indexOf("win") >= 0)) return false;
+
+  int pos = 0;
+  DEBUG_PRINT(F("API req: "));
+  DEBUG_PRINTLN(req);
+
+  //get command
+  pos = req.indexOf(F("CM="));
+  if (pos > 0) {
+    switch (getNumVal(&req, pos))
+    {
+      case 1:  forward(); break; //forward
+      case 2:  reverse(); break; //reverse
+      case 3:  up(); break; //up
+      case 4: down(); break; //down
+      
+    }
+  }
 
   return true;
 }

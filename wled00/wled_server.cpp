@@ -209,6 +209,15 @@ void initServer()
     request->send(response);
     //request->send_P(200, "text/html", PAGE_usermod);
   });
+
+  server.on("/relay", HTTP_GET, [](AsyncWebServerRequest *request){
+    if (handleIfNoneMatchCacheHeader(request)) return;
+    AsyncWebServerResponse *response = request->beginResponse_P(200, "text/html", PAGE_relay, PAGE_relay_length);
+    response->addHeader(FPSTR(s_content_enc),"gzip");
+    setStaticContentCacheHeaders(response);
+    request->send(response);
+    //request->send_P(200, "text/html", PAGE_usermod);
+  });
     
   //Deprecated, use of /json/state and presets recommended instead
   server.on("/url", HTTP_GET, [](AsyncWebServerRequest *request){
