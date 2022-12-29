@@ -35,6 +35,17 @@
 		strA = "&CM=4";
 		send();
 	  }
+	  function start()
+	  {
+		strA = "&CM=5";
+		send();
+	  }
+	  function end()
+	  {
+		strA = "&CM=6";
+		send();
+	  }
+
 	</script>
 	<style>
 		body {
@@ -66,5 +77,6 @@
 <button type="submit" onclick="reverse()">Reverse</button>
 <button type="submit" onclick="up()">Up</button>
 <button type="submit" onclick="down()">Down/Stop</button>
+<button type="submit" onmousedown="start()" onmouseup="end()">Click and hold</button>
 </body>
 </html>

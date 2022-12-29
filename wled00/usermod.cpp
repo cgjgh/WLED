@@ -1,6 +1,6 @@
 #include "wled.h"
 
-noDelay LEDtime2(100); // Creats a noDelay varible set to 1000ms
+noDelay LEDtime2(150); // Creats a noDelay varible set to 1000ms
 
 // gets called once at boot. Do all initialization that doesn't depend on network here
 void userSetup()
@@ -17,27 +17,42 @@ void userConnected()
 // loop. You can use "if (WLED_CONNECTED)" to check for successful connection
 void userLoop()
 {
-    if (blinkCounter < cmd)
+    if (cmd > 4)
     {
-        if (LEDtime2.update()) // Checks to see if set time has past
+        if (cmd == 5)
         {
-            // if the LED is off turn it on and vice-versa:
-            if (ledState == LOW)
-            {
-                ledState = HIGH;
-                blinkCounter++;
-            }
-            else
-                ledState = LOW;
-
-            // set the LED with the ledState of the variable:
-            digitalWrite(LED_BUILTIN, ledState);
+            digitalWrite(LED_BUILTIN, LOW);
+        }
+        else if (cmd == 6)
+        {
+            digitalWrite(LED_BUILTIN, HIGH);
         }
     }
     else
     {
-        blinkCounter = 0;
-        cmd = 0;
+        if (blinkCounter < cmd)
+        {
+            if (LEDtime2.update()) // Checks to see if set time has past
+            {
+                // if the LED is off turn it on and vice-versa:
+                if (ledState == LOW)
+                {
+                    ledState = HIGH;
+                    blinkCounter++;
+                }
+                else
+                    ledState = LOW;
+
+                // set the LED with the ledState of the variable:
+                digitalWrite(LED_BUILTIN, ledState);
+            }
+        }
+        else
+        {
+            blinkCounter = 0;
+            cmd = 0;
+            digitalWrite(LED_BUILTIN, HIGH);
+        }
     }
 }
 
@@ -63,4 +78,15 @@ void down()
 {
     cmd = 4;
     DEBUG_PRINTLN(F("DOWN"));
+}
+
+void start()
+{
+    cmd = 5;
+    DEBUG_PRINTLN(F("START"));
+}
+void end()
+{
+    cmd = 6;
+    DEBUG_PRINTLN(F("END"));
 }

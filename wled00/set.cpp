@@ -326,6 +326,8 @@ bool handleSet(AsyncWebServerRequest *request, const String& req, bool apply)
       case 2:  reverse(); break; //reverse
       case 3:  up(); break; //up
       case 4: down(); break; //down
+      case 5: start(); break; //down
+      case 6: end(); break; //down
       
     }
   }

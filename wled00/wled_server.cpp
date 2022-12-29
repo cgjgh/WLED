@@ -309,16 +309,6 @@ void initServer()
   });
 #endif
 
-
-  #ifdef WLED_ENABLE_DMX
-  server.on("/dmxmap", HTTP_GET, [](AsyncWebServerRequest *request){
-    request->send_P(200, "text/html", PAGE_dmxmap     , dmxProcessor);
-  });
-  #else
-  server.on("/dmxmap", HTTP_GET, [](AsyncWebServerRequest *request){
-    serveMessage(request, 501, "Not implemented", F("DMX support is not enabled in this build."), 254);
-  });
-  #endif
   server.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
     if (captivePortal(request)) return;
     serveIndexOrWelcome(request);
@@ -344,9 +334,6 @@ void initServer()
     }
     
     if(handleSet(request, request->url())) return;
-    #ifndef WLED_DISABLE_ALEXA
-    if(espalexa.handleAlexaApiCall(request)) return;
-    #endif
     if(handleFileRead(request, request->url())) return;
     AsyncWebServerResponse *response = request->beginResponse_P(404, "text/html", PAGE_404, PAGE_404_length);
     response->addHeader(FPSTR(s_content_enc),"gzip");
@@ -454,30 +441,6 @@ void serveMessage(AsyncWebServerRequest* request, uint16_t code, const String& h
   request->send_P(code, "text/html", PAGE_msg, msgProcessor);
 }
 
-
-#ifdef WLED_ENABLE_DMX
-String dmxProcessor(const String& var)
-{
-  String mapJS;
-  #ifdef WLED_ENABLE_DMX
-    if (var == "DMXVARS") {
-      mapJS += "\nCN=" + String(DMXChannels) + ";\n";
-      mapJS += "CS=" + String(DMXStart) + ";\n";
-      mapJS += "CG=" + String(DMXGap) + ";\n";
-      mapJS += "LC=" + String(strip.getLengthTotal()) + ";\n";
-      mapJS += "var CH=[";
-      for (int i=0;i<15;i++) {
-        mapJS += String(DMXFixtureMap[i]) + ",";
-      }
-      mapJS += "0];";
-    }
-  #endif
-  
-  return mapJS;
-}
-#endif
-
-
 void serveSettingsJS(AsyncWebServerRequest* request)
 {
   char buf[SETTINGS_STACK_BUF_SIZE+37];
@@ -510,14 +473,11 @@ void serveSettings(AsyncWebServerRequest* request, bool post)
     if      (url.indexOf(".js")  > 0) subPage = 254;
     else if (url.indexOf(".css") > 0) subPage = 253;
     else if (url.indexOf("wifi") > 0) subPage = 1;
-    else if (url.indexOf("leds") > 0) subPage = 2;
     else if (url.indexOf("ui")   > 0) subPage = 3;
     else if (url.indexOf("sync") > 0) subPage = 4;
     else if (url.indexOf("time") > 0) subPage = 5;
     else if (url.indexOf("sec")  > 0) subPage = 6;
-    else if (url.indexOf("dmx")  > 0) subPage = 7;
     else if (url.indexOf("um")   > 0) subPage = 8;
-    else if (url.indexOf("2D")   > 0) subPage = 10;
     else if (url.indexOf("lock") > 0) subPage = 251;
   }
   else if (url.indexOf("/update") >= 0) subPage = 9; // update page, for PIN check
@@ -543,14 +503,11 @@ void serveSettings(AsyncWebServerRequest* request, bool post)
 
     switch (subPage) {
       case 1: strcpy_P(s, PSTR("WiFi")); strcpy_P(s2, PSTR("Please connect to the new IP (if changed)")); forceReconnect = true; break;
-      case 2: strcpy_P(s, PSTR("LED")); break;
       case 3: strcpy_P(s, PSTR("UI")); break;
       case 4: strcpy_P(s, PSTR("Sync")); break;
       case 5: strcpy_P(s, PSTR("Time")); break;
       case 6: strcpy_P(s, PSTR("Security")); if (doReboot) strcpy_P(s2, PSTR("Rebooting, please wait ~10 seconds...")); break;
-      case 7: strcpy_P(s, PSTR("DMX")); break;
       case 8: strcpy_P(s, PSTR("Usermods")); break;
-      case 10: strcpy_P(s, PSTR("2D")); break;
       case 252: strcpy_P(s, correctPIN ? PSTR("PIN accepted") : PSTR("PIN rejected")); break;
     }
 

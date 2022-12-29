@@ -205,6 +205,8 @@ void forward();
 void reverse();
 void up();
 void down();
+void start();
+void end();
 
 
 //util.cpp
