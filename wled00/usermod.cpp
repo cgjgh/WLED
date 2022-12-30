@@ -56,6 +56,19 @@ void userLoop()
     }
 }
 
+void handleRelay(byte num)
+{
+   switch (num)
+    {
+      case 1:  forward(); break; //forward
+      case 2:  reverse(); break; //reverse
+      case 3:  up(); break; //up
+      case 4: down(); break; //down
+      case 5: start(); break; //start
+      case 6: end(); break; //end
+    }
+}
+
 void forward()
 {
     cmd = 1;

@@ -1,51 +1,181 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
 	<meta charset="UTF-8">
-	<meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport"/>
+	<meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport" />
 	<title>Relay</title>
 	<script>
 		strA = "";
-	  function send()
-	  {
-		nocache = "&nocache=" + Math.random() * 1000000;
-		var request = new XMLHttpRequest();
-		// send HTTP request
-		request.open("GET", "win/" + strA +nocache, true);
-		request.send(null);
-		strA = "";
-	  }
-	  function forward()
-	  {
-		strA = "&CM=1";
-		send();
-	  }
-	  function reverse()
-	  {
-		strA = "&CM=2";
-		send();
-	  }
-	  function up()
-	  {
-		strA = "&CM=3";
-		send();
-	  }
-	  function down()
-	  {
-		strA = "&CM=4";
-		send();
-	  }
-	  function start()
-	  {
-		strA = "&CM=5";
-		send();
-	  }
-	  function end()
-	  {
-		strA = "&CM=6";
-		send();
-	  }
+		function gId(s) { return d.getElementById(s); }
+		function gN(s) { return d.getElementsByName(s)[0]; }
+		function send() {
+			nocache = "&nocache=" + Math.random() * 1000000;
+			var request = new XMLHttpRequest();
+			// send HTTP request
+			request.open("POST", "win/" + strA + nocache, true);
+			request.send(null);
+			strA = "";
+		}
 
+		function forward() {
+			strA = "&CM=1";
+			send();
+		}
+		function reverse() {
+			strA = "&CM=2";
+			send();
+		}
+		function up() {
+			strA = "&CM=3";
+			send();
+		}
+		function down() {
+			strA = "&CM=4";
+			send();
+		}
+		function start() {
+			strA = "&CM=5";
+			send();
+		}
+		function end() {
+			strA = "&CM=6";
+			send();
+		}
+
+		function process_touchstart(ev) {
+			// Use the event's data to call out to the appropriate gesture handlers
+			//   switch (ev.touches.length) {
+			//     case 1: handle_one_touch(ev); break;
+			//     case 2: handle_two_touches(ev); break;
+			//     case 3: handle_three_touches(ev); break;
+			//     default: gesture_not_supported(ev); break;
+			//   }
+			strA = "&CM=5";
+			send();
+		}
+
+		function process_touchend(ev) {
+			strA = "&CM=6";
+			send();
+		}
+		function touch2Mouse(e) {
+			var theTouch = e.changedTouches[0];
+			var mouseEv;
+
+			switch (e.type) {
+				case "touchstart": mouseEv = "mousedown"; break;
+				case "touchend": mouseEv = "mouseup"; break;
+				case "touchmove": mouseEv = "mousemove"; break;
+				default: return;
+			}
+
+			var mouseEvent = document.createEvent("MouseEvent");
+			mouseEvent.initMouseEvent(mouseEv, true, true, window, 1, theTouch.screenX, theTouch.screenY, theTouch.clientX, theTouch.clientY, false, false, false, false, 0, null);
+			theTouch.target.dispatchEvent(mouseEvent);
+
+			e.preventDefault();
+		}
+
+		//https://codepen.io/leonelgalan/pen/YzPGwBx
+		// https://stackoverflow.com/questions/48048957/react-long-press-event
+		// import { useState, useEffect, useCallback } from 'react';
+		const { useState, useEffect, useCallback } = React;
+
+		const Button = styled.div`
+  user-select: none;
+  cursor: pointer;
+  font-size:1.5em;
+  background-color: gray;
+  color: white;
+  padding: 20px 30px;
+  position: relative;
+  width: 80%;
+`;
+
+		const Progress = styled.div`
+  margin: -20px -30px;;
+  background-color: green;
+  height: 10px;
+  position: absolute;
+  width: 0;
+  transition: width 0s;
+
+  &.start,
+  &.done {
+    width: 100%;
+    transition: width 3s;
+  }
+`;
+
+		const Container = styled.div`
+  text-align: center;
+`;
+
+		function useLongPress(callback = () => { }, ms = 300) {
+			const [startLongPress, setStartLongPress] = useState(false);
+
+			useEffect(() => {
+				let timerId;
+				if (startLongPress) {
+					timerId = setTimeout(callback, ms);
+				} else {
+					clearTimeout(timerId);
+				}
+
+				return () => {
+					clearTimeout(timerId);
+				};
+			}, [startLongPress]);
+
+			const start = useCallback(() => {
+				setStartLongPress(true);
+			}, []);
+			const stop = useCallback(() => {
+				setStartLongPress(false);
+			}, []);
+
+			return [
+				startLongPress,
+				{
+					onMouseDown: start,
+					onMouseUp: stop,
+					onMouseLeave: stop,
+					onTouchStart: start,
+					onTouchEnd: stop,
+				}
+			];
+		}
+
+		function ProgressButton(props) {
+			const [startLongPress, backspaceLongPress] = useLongPress(props.longPressBackspaceCallback, 3000);
+			let className = 'progress'
+			if (startLongPress) {
+				className += ' start';
+			}
+
+			return (
+				<Button {...backspaceLongPress} >
+					<Progress className={className}></Progress>
+					<Container>
+						Press and Hold for +3s
+					</Container>
+				</Button>
+			);
+		};
+
+		ReactDOM.render(
+			<ProgressButton longPressBackspaceCallback={() => alert('Long Press!')} />,
+			document.getElementById('root')
+		);
+
+		function S() {
+			document.addEventListener("touchstart", touch2Mouse, true);
+			document.addEventListener("touchmove", touch2Mouse, true);
+			document.addEventListener("touchend", touch2Mouse, true);
+			// gId("hold").addEventListener('touchstart', process_touchstart, false);
+			// gId("hold").addEventListener('touchend', process_touchend, false);
+		} 
 	</script>
 	<style>
 		body {
@@ -54,9 +184,11 @@
 			height: 100px;
 			margin: 0;
 		}
+
 		html {
 			--h: 9vh;
 		}
+
 		button {
 			background: #333;
 			color: #fff;
@@ -72,11 +204,14 @@
 		}
 	</style>
 </head>
+
 <body onload="S()">
-<button type="submit" onclick="forward()">Forward</button>
-<button type="submit" onclick="reverse()">Reverse</button>
-<button type="submit" onclick="up()">Up</button>
-<button type="submit" onclick="down()">Down/Stop</button>
-<button type="submit" onmousedown="start()" onmouseup="end()">Click and hold</button>
+	<button id="for" type="submit" onclick="forward()">Forward</button>
+	<button id="rev" type="submit" onclick="reverse()">Reverse</button>
+	<button type="submit" onclick="up()">Up</button>
+	<button type="submit" onclick="down()">Down/Stop</button>
+	<button id="hold" type="submit" onmousedown="start()" onmouseup="end()">Click and hold</button>
+	<div id="root">
 </body>
+
 </html>

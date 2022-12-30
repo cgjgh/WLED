@@ -116,52 +116,6 @@
 			
 			gId('gen').innerHTML = str;
 		}
-		function GetLS()
-		{
-			sett = localStorage.getItem('wledUiCfg');
-			if (!sett) gId('lserr').style.display = "inline";
-			try {
-				sett = JSON.parse(sett);
-			} catch (e) {
-				sett = {};
-				gId('lserr').style.display = "inline";
-				gId('lserr').innerHTML = "&#9888; Settings JSON parsing failed. (" + e + ")";
-			}
-			genForm(sett);
-			gId('dm').checked = (gId('theme_base').value === 'light');
-		}
-	
-		function SetLS()
-		{
-			var l = d.querySelectorAll('.agi');
-			for (var i = 0; i < l.length; i++) {
-				var e = l[i];
-				var val = e.classList.contains('cb') ? e.checked : e.value;
-				set(e.id, sett, val);
-				console.log(`${e.id} set to ${val}`);
-			}
-			try {
-				localStorage.setItem('wledUiCfg', JSON.stringify(sett));
-				gId('lssuc').style.display = "inline";
-			} catch (e) {
-				gId('lssuc').style.display = "none";
-				gId('lserr').style.display = "inline";
-				gId('lserr').innerHTML = "&#9888; Settings JSON saving failed. (" + e + ")";
-			}
-		}
-
-		function cLS()
-		{
-			localStorage.removeItem('wledP');
-			localStorage.removeItem('wledPmt');
-			localStorage.removeItem('wledPalx');
-			showToast("Cleared.");
-		}
-		
-		function Save() {
-			SetLS();
-			if (d.Sf.DS.value != initial_ds || d.Sf.ST.checked != initial_st || d.Sf.SU.checked != initial_su) d.Sf.submit();
-		}
 		
 		// https://www.educative.io/edpresso/how-to-dynamically-load-a-js-file-in-javascript
 		function loadJS(FILE_URL, async = true) {
@@ -177,7 +131,6 @@
 				initial_ds = d.Sf.DS.value;
 				initial_st = d.Sf.ST.checked;
 				initial_su = d.Sf.SU.checked;
-				GetLS();
 			});
 			// error event
 			scE.addEventListener("error", (ev) => {
@@ -206,23 +159,7 @@
 			var f = gId('theme_base');
 			if (f) f.value = (gId('dm').checked) ? 'light':'dark';
 		}
-
-		// random BG image
-		function setRandomBg() {
-			if (gId("theme_bg_random").checked) {
-				gId("theme_bg_url").value = "https://picsum.photos/1920/1080";
-			} else {
-				gId("theme_bg_url").value = "";
-			}
-			
-		}
-		function checkRandomBg() {
-			if (gId("theme_bg_url").value === "https://picsum.photos/1920/1080") {
-				gId("theme_bg_random").checked = true;
-			} else {
-				gId("theme_bg_random").checked = false;
-			}
-		}
+		
 		function uploadFile(fO,name) {
 			var req = new XMLHttpRequest();
 			req.addEventListener('load', function(){showToast(this.responseText,this.status >= 400)});
@@ -255,8 +192,6 @@
 		<span class="l"></span>: <input type="checkbox" id="comp_labels" class="agi cb"><br>
 		I hate dark mode: <input type="checkbox" id="dm" onchange="UI()"><br>
 		<span id="idonthateyou" style="display:none"><i>Why would you? </i>&#x1F97A;<br></span>
-		<span class="l"></span>: <input type="number" min=0.0 max=1.0 step=0.01 id="theme_alpha_tab" class="agi"><br>
-		<span class="l"></span>: <input type="number" min=0.0 max=1.0 step=0.01 id="theme_alpha_bg" class="agi"><br>
 		<div id="toast"></div>
 		<hr><button type="button" onclick="cLS()">Clear local storage</button>
 		<hr><button type="button" onclick="B()">Back</button><button type="button" onclick="Save()">Save</button>
