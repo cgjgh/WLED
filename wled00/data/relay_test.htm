@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport" />
+  <title>Relay</title>
+  <script src='https://cdnjs.cloudflare.com/ajax/libs/react/16.12.0/umd/react.production.min.js'></script>
+  <script src='https://cdnjs.cloudflare.com/ajax/libs/react-dom/16.11.0/umd/react-dom.production.min.js'></script>
+  <script src='https://cdnjs.cloudflare.com/ajax/libs/styled-components/4.4.1/styled-components.min.js'></script>
+  <script>
+    // function feedback() { }
+    // // instead of including [script src="iro.js"][/script] and [script src="rangetouch.js"][/script]
+    // // (which would be inlined by nodeJS inliner during minimization and compression) we need to load them dynamically
+    // // the following is needed to load iro.js and rangetouch.js as consecutive requests to allow ESP8266
+    // // to keep up with requests (if requests happent too fast some may not get processed)
+    // // it will also call onLoad() after last is loaded (it was removed from [body onload="onLoad()"]).
+    // var h = document.getElementsByTagName('head')[0];
+    // var l = document.createElement('script');
+    // l.type = 'application/javascript';
+    // l.src = 'reactprod.js';
+    // setTimeout(() => { h.appendChild(l) }, 100);
+
+    // l = document.createElement('script');
+    // l.type = 'application/javascript';
+    // l.src = 'reactprod.js';
+    // setTimeout(() => { h.appendChild(l) }, 100);
+
+    // l = document.createElement('script');
+    // l.type = 'application/javascript';
+    // l.src = 'styledcom.js';
+    // setTimeout(() => { h.appendChild(l) }, 100);
+
+	// l = document.createElement('script');
+    // l.type = 'application/javascript';
+    // l.src = 'styledcommap.js';
+    // setTimeout(() => { h.appendChild(l) }, 100);
+
+	// l = document.createElement('script');
+    // l.type = 'application/javascript';
+    // l.src = 'styletags.js';
+    // setTimeout(() => { h.appendChild(l) }, 100);
+
+    strA = "";
+    function gId(s) { return d.getElementById(s); }
+    function gN(s) { return d.getElementsByName(s)[0]; }
+    function send() {
+      nocache = "&nocache=" + Math.random() * 1000000;
+      var request = new XMLHttpRequest();
+      // send HTTP request
+      request.open("POST", "win/" + strA + nocache, true);
+      request.send(null);
+      strA = "";
+    }
+
+    function forward() {
+      strA = "&CM=1";
+      send();
+    }
+    function reverse() {
+      strA = "&CM=2";
+      send();
+    }
+    function up() {
+      strA = "&CM=3";
+      send();
+    }
+    function down() {
+      strA = "&CM=4";
+      send();
+    }
+    function start() {
+      strA = "&CM=5";
+      send();
+    }
+    function end() {
+      strA = "&CM=6";
+      send();
+    }
+
+    function longpress() {
+      alert('Opening Door...')
+      navigator.vibrate(200);
+      strA = "&CM=7";
+      send();
+    }
+
+
+    function process_touchstart(ev) {
+      // Use the event's data to call out to the appropriate gesture handlers
+      //   switch (ev.touches.length) {
+      //     case 1: handle_one_touch(ev); break;
+      //     case 2: handle_two_touches(ev); break;
+      //     case 3: handle_three_touches(ev); break;
+      //     default: gesture_not_supported(ev); break;
+      //   }
+      strA = "&CM=5";
+      send();
+    }
+
+    function process_touchend(ev) {
+      strA = "&CM=6";
+      send();
+    }
+    function touch2Mouse(e) {
+      var theTouch = e.changedTouches[0];
+      var mouseEv;
+
+      switch (e.type) {
+        case "touchstart": mouseEv = "mousedown"; break;
+        case "touchend": mouseEv = "mouseup"; break;
+        case "touchmove": mouseEv = "mousemove"; break;
+        default: return;
+      }
+
+      var mouseEvent = document.createEvent("MouseEvent");
+      mouseEvent.initMouseEvent(mouseEv, true, true, window, 1, theTouch.screenX, theTouch.screenY, theTouch.clientX, theTouch.clientY, false, false, false, false, 0, null);
+      theTouch.target.dispatchEvent(mouseEvent);
+
+      e.preventDefault();
+    }
+
+    function S() {
+      document.addEventListener("touchstart", touch2Mouse, true);
+      document.addEventListener("touchmove", touch2Mouse, true);
+      document.addEventListener("touchend", touch2Mouse, true);
+      // gId("hold").addEventListener('touchstart', process_touchstart, false);
+      // gId("hold").addEventListener('touchend', process_touchend, false);
+    } 
+  </script>
+  <style>
+    body {
+      text-align: center;
+      background: #222;
+      height: 100px;
+      margin: 0;
+    }
+
+    html {
+      --h: 9vh;
+    }
+
+    button {
+      background: #333;
+      color: #fff;
+      font-family: Verdana, Helvetica, sans-serif;
+      display: block;
+      border: 1px solid #333;
+      border-radius: var(--h);
+      font-size: 6vmin;
+      height: var(--h);
+      width: calc(50% - 40px);
+      margin: 2vh auto 0;
+      cursor: pointer;
+      transition: 0.2s all;
+    }
+
+    /* Adding transformation when the button is active */
+
+    button:active {
+      transform: scale(0.98);
+      /* Scaling button to 0.98 to its original size */
+      /* box-shadow: 3px 2px 22px 1px rgba(0, 0, 0, 0.24);
+      Lowering the shadow */
+    }
+
+    .btn {
+      transition: 0.2s all;
+    }
+
+    /* Adding transformation when the button is active */
+
+    .btn:active {
+      transform: scale(0.98);
+      /* Scaling button to 0.98 to its original size */
+    }
+  </style>
+</head>
+
+<body onload="S()">
+  <button id="for" type="submit" onclick="forward()">Forward</button>
+  <button id="rev" type="submit" onclick="reverse()">Reverse</button>
+  <button type="submit" onclick="up()">Up</button>
+  <button type="submit" onclick="down()">Down/Stop</button>
+  <button id="hold" type="submit" onmousedown="start()" onmouseup="end()">Click and hold</button>
+  <div id="root" class="btn"></div>
+  <!-- partial -->
+  
+  <script type="module">
+    // https://stackoverflow.com/questions/48048957/react-long-press-event
+    // import { useState, useEffect, useCallback } from 'react';
+    const { useState, useEffect, useCallback } = React;
+
+    const Button = styled.div`
+  user-select: none;
+  background: #333;
+  color: #fff;
+  font-family: Verdana, Helvetica, sans-serif;
+  display: block;
+  border: 1px solid #333;
+  border-radius: var(--h);
+  font-size: 6vmin;
+  height: var(--h);
+  width: calc(50% - 40px);
+  margin: 2vh auto 0;
+  cursor: pointer;
+  transition: 0.2s all;
+`;
+
+    const Progress = styled.div`
+  margin: 0px 0px;
+  background-color: green;
+  border-radius: var(--h);
+  height: var(--h);
+  position: absolute;
+  opacity: .5;
+  width: 0;
+  transition: width 0s;
+
+  &.start,
+  &.done {
+    width: calc(50% - 40px);
+    transition: width 3s;
+  }
+`;
+
+    const Container = styled.div`
+  text-align: center;
+`;
+
+    function useLongPress(callback = () => { }, ms = 300) {
+      const [startLongPress, setStartLongPress] = useState(false);
+
+      useEffect(() => {
+        let timerId;
+        if (startLongPress) {
+          timerId = setTimeout(callback, ms);
+        } else {
+          clearTimeout(timerId);
+        }
+
+        return () => {
+          clearTimeout(timerId);
+        };
+      }, [startLongPress]);
+
+      const start = useCallback(() => {
+        setStartLongPress(true);
+      }, []);
+      const stop = useCallback(() => {
+        setStartLongPress(false);
+      }, []);
+
+      return [
+        startLongPress,
+        {
+          onMouseDown: start,
+          onMouseUp: stop,
+          onMouseLeave: stop,
+          onTouchStart: start,
+          onTouchEnd: stop
+        }];
+
+
+    }
+
+    function ProgressButton(props) {
+      const [startLongPress, backspaceLongPress] = useLongPress(props.longPressBackspaceCallback, 3000);
+      let className = 'progress';
+      if (startLongPress) {
+        className += ' start';
+      }
+
+      return /*#__PURE__*/(
+        React.createElement(Button, backspaceLongPress, /*#__PURE__*/
+          React.createElement(Progress, { className: className }), /*#__PURE__*/
+          React.createElement(Container, null, "Press and Hold for +3s")));
+
+
+
+
+    };
+
+    ReactDOM.render( /*#__PURE__*/
+      React.createElement(ProgressButton, { longPressBackspaceCallback: () => longpress() }),
+      document.getElementById('root'));
+  </script>
+
+</body>
+
+</html>

@@ -304,6 +304,14 @@ writeChunks(
         str.replace(/fetch\("http\:\/\/.*\/win/gms, 'fetch("/win'),
     },
     {
+      file: "relay_test.htm",
+      name: "PAGE_relay_test",
+      method: "gzip",
+      filter: "html-minify",
+      mangle: (str) =>
+        str.replace(/fetch\("http\:\/\/.*\/win/gms, 'fetch("/win'),
+    },
+    {
       file: "msg.htm",
       name: "PAGE_msg",
       prepend: "=====(",
@@ -347,10 +355,36 @@ writeChunks(
       method: "gzip"
     },
     {
+      file: "reactprod.js",
+      name: "reactprod",
+      method: "gzip"
+    },
+    {
+      file: "reactdom.js",
+      name: "reactdom",
+      method: "gzip"
+    },
+    {
+      file: "styledcom.js",
+      name: "styledcom",
+      method: "gzip"
+    },
+    {
+      file: "styledcommap.js",
+      name: "styledcommap",
+      method: "gzip"
+    },
+    {
+      file: "styletags.js",
+      name: "styletags",
+      method: "gzip"
+    },
+    {
       file: "rangetouch.js",
       name: "rangetouchJs",
       method: "gzip"
     }
+    
   ],
   "wled00/html_other.h"
 );
