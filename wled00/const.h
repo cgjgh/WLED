@@ -10,6 +10,8 @@
 #define DEFAULT_AP_SSID     "WLED-AP"
 #define DEFAULT_AP_PASS     "wled1234"
 #define DEFAULT_OTA_PASS    "wledota"
+#define DEFAULT_HTTP_USER    "admin"
+#define DEFAULT_HTTP_PASS     "wled1234"
 
 //increase if you need more
 #ifndef WLED_MAX_USERMODS

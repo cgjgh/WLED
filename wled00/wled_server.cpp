@@ -108,6 +108,8 @@ void initServer()
   
   //settings page
   server.on("/settings", HTTP_GET, [](AsyncWebServerRequest *request){
+    if(!request->authenticate(WLED_HTTP_USER, WLED_HTTP_PASS))
+      return request->requestAuthentication(); 
     serveSettings(request);
   });
   
@@ -128,9 +130,6 @@ void initServer()
     }
   });
   
-  server.on("/sliders", HTTP_GET, [](AsyncWebServerRequest *request){
-    serveIndex(request);
-  });
   
   server.on("/welcome", HTTP_GET, [](AsyncWebServerRequest *request){
     serveSettings(request);
@@ -142,7 +141,9 @@ void initServer()
   });
   
   server.on("/settings", HTTP_POST, [](AsyncWebServerRequest *request){
-    serveSettings(request, true);
+    if(!request->authenticate(WLED_HTTP_USER, WLED_HTTP_PASS))
+      return request->requestAuthentication(); 
+    serveSettings(request, true)
   });
 
   server.on("/json", HTTP_GET, [](AsyncWebServerRequest *request){
@@ -212,6 +213,8 @@ void initServer()
 
   server.on("/relay", HTTP_GET, [](AsyncWebServerRequest *request){
     if (handleIfNoneMatchCacheHeader(request)) return;
+    if(!request->authenticate(WLED_HTTP_USER, WLED_HTTP_PASS))
+      return request->requestAuthentication(); 
     AsyncWebServerResponse *response = request->beginResponse_P(200, "text/html", PAGE_relay, PAGE_relay_length);
     response->addHeader(FPSTR(s_content_enc),"gzip");
     setStaticContentCacheHeaders(response);
@@ -220,6 +223,8 @@ void initServer()
   });
   server.on("/relaytest", HTTP_GET, [](AsyncWebServerRequest *request){
     if (handleIfNoneMatchCacheHeader(request)) return;
+   if(!request->authenticate(WLED_HTTP_USER, WLED_HTTP_PASS))
+      return request->requestAuthentication(); 
     AsyncWebServerResponse *response = request->beginResponse_P(200, "text/html", PAGE_relay_test, PAGE_relay_test_length);
     response->addHeader(FPSTR(s_content_enc),"gzip");
     setStaticContentCacheHeaders(response);
@@ -231,25 +236,10 @@ void initServer()
     URL_response(request);
   });
     
-  server.on("/teapot", HTTP_GET, [](AsyncWebServerRequest *request){
-    serveMessage(request, 418, F("418. I'm a teapot."), F("(Tangible Embedded Advanced Project Of Twinkling)"), 254);
-  });
-
   server.on("/upload", HTTP_POST, [](AsyncWebServerRequest *request) {},
         [](AsyncWebServerRequest *request, const String& filename, size_t index, uint8_t *data,
                       size_t len, bool final) {handleUpload(request, filename, index, data, len, final);}
   );
-
-#ifdef WLED_ENABLE_SIMPLE_UI
-  server.on("/simple.htm", HTTP_GET, [](AsyncWebServerRequest *request){
-    if (handleFileRead(request, "/simple.htm")) return;
-    if (handleIfNoneMatchCacheHeader(request)) return;
-    AsyncWebServerResponse *response = request->beginResponse_P(200, "text/html", PAGE_simple, PAGE_simple_L);
-    response->addHeader(FPSTR(s_content_enc),"gzip");
-    setStaticContentCacheHeaders(response);
-    request->send(response);
-  });
-#endif
 
   server.on("/iro.js", HTTP_GET, [](AsyncWebServerRequest *request){
     AsyncWebServerResponse *response = request->beginResponse_P(200, "application/javascript", iroJs, iroJs_length);

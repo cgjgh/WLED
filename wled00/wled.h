@@ -174,6 +174,13 @@ using PSRAMDynamicJsonDocument = BasicJsonDocument<PSRAM_Allocator>;
 #ifndef WLED_AP_PASS
   #define WLED_AP_PASS DEFAULT_AP_PASS
 #endif
+#ifndef WLED_HTTP_USER
+  #define WLED_HTTP_USER DEFAULT_HTTP_USER
+#endif
+
+#ifndef WLED_HTTP_PASS
+  #define WLED_HTTP_PASS DEFAULT_HTTP_PASS
+#endif
 
 #ifndef SPIFFS_EDITOR_AIRCOOOKIE
   #error You are not using the Aircoookie fork of the ESPAsyncWebserver library.\
