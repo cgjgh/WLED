@@ -69,7 +69,7 @@ void handleSettingsSet(AsyncWebServerRequest *request, byte subPage)
     #ifdef WLED_ENABLE_MQTT
     mqttEnabled = request->hasArg(F("MQ"));
     strlcpy(mqttServer, request->arg(F("MS")).c_str(), 33);
-    t = request->arg(F("MQPORT")).toInt();
+    int t = request->arg(F("MQPORT")).toInt();
     if (t > 0) mqttPort = t;
     strlcpy(mqttUser, request->arg(F("MQUSER")).c_str(), 41);
     if (!isAsterisksOnly(request->arg(F("MQPASS")).c_str(), 41)) strlcpy(mqttPass, request->arg(F("MQPASS")).c_str(), 65);

@@ -28,7 +28,7 @@
 #define WLED_DISABLE_BLYNK       // saves 6kb
 #define WLED_DISABLE_HUESYNC     // saves 4kb
 #define WLED_DISABLE_INFRARED    // saves 12kb, there is no pin left for this on ESP8266-01
-#define WLED_DISABLE_MQTT
+//#define WLED_DISABLE_MQTT
 #define WLED_DISABLE_WEBSOCKETS
 #define WLED_DISABLE_LOXONE
 #define WLED_DISABLE_2D

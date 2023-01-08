@@ -132,18 +132,39 @@ function checkCookie() {
 		}
 
 		button {
-			background: #333;
-			color: #fff;
-			font-family: Verdana, Helvetica, sans-serif;
-			display: block;
-			border: 1px solid #333;
-			border-radius: var(--h);
-			font-size: 6vmin;
-			height: var(--h);
-			width: calc(50% - 40px);
-			margin: 2vh auto 0;
-			cursor: pointer;
-		}
+      background: #333;
+      color: #fff;
+      font-family: Verdana, Helvetica, sans-serif;
+      display: block;
+      border: 1px solid #333;
+      border-radius: var(--h);
+      font-size: 6vmin;
+      height: var(--h);
+      width: calc(50% - 40px);
+      margin: 2vh auto 0;
+      cursor: pointer;
+      transition: 0.2s all;
+    }
+
+    /* Adding transformation when the button is active */
+
+    button:active {
+      transform: scale(0.98);
+      /* Scaling button to 0.98 to its original size */
+      /* box-shadow: 3px 2px 22px 1px rgba(0, 0, 0, 0.24);
+      Lowering the shadow */
+    }
+
+    .btn {
+      transition: 0.2s all;
+    }
+
+    /* Adding transformation when the button is active */
+
+    .btn:active {
+      transform: scale(0.98);
+      /* Scaling button to 0.98 to its original size */
+    }
 	</style>
 </head>
 

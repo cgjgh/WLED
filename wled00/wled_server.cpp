@@ -1,9 +1,6 @@
 #include "wled.h"
 
 #include "html_ui.h"
-#ifdef WLED_ENABLE_SIMPLE_UI
-  #include "html_simple.h"
-#endif
 #include "html_settings.h"
 #include "html_other.h"
 
@@ -143,7 +140,7 @@ void initServer()
   server.on("/settings", HTTP_POST, [](AsyncWebServerRequest *request){
     if(!request->authenticate(WLED_HTTP_USER, WLED_HTTP_PASS))
       return request->requestAuthentication(); 
-    serveSettings(request, true)
+    serveSettings(request, true);
   });
 
   server.on("/json", HTTP_GET, [](AsyncWebServerRequest *request){
@@ -412,21 +409,16 @@ void setStaticContentCacheHeaders(AsyncWebServerResponse *response)
 
 void serveIndex(AsyncWebServerRequest* request)
 {
-  if (handleFileRead(request, "/index.htm")) return;
+  // if (handleFileRead(request, "/index.htm")) return;
 
-  if (handleIfNoneMatchCacheHeader(request)) return;
+  // if (handleIfNoneMatchCacheHeader(request)) return;
 
-  AsyncWebServerResponse *response;
-#ifdef WLED_ENABLE_SIMPLE_UI
-  if (simplifiedUI)
-    response = request->beginResponse_P(200, "text/html", PAGE_simple, PAGE_simple_L);
-  else
-#endif
-    response = request->beginResponse_P(200, "text/html", PAGE_index, PAGE_index_L);
+  // AsyncWebServerResponse *response;
+  //   response = request->beginResponse_P(200, "text/html", PAGE_index, PAGE_index_L);
 
-  response->addHeader(FPSTR(s_content_enc),"gzip");
-  setStaticContentCacheHeaders(response);
-  request->send(response);
+  // response->addHeader(FPSTR(s_content_enc),"gzip");
+  // setStaticContentCacheHeaders(response);
+  // request->send(response);
 }
 
 

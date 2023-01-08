@@ -480,6 +480,7 @@ bool deserializeConfigSec() {
   getStringFromJson(apPass, ap["psk"] , 65);
 
 #ifdef WLED_ENABLE_MQTT
+  JsonObject interfaces = doc.createNestedObject("if");
   JsonObject if_mqtt = interfaces["mqtt"];
   getStringFromJson(mqttPass, if_mqtt["psk"], 65);
 #endif
@@ -513,6 +514,7 @@ void serializeConfigSec() {
   ap["psk"] = apPass;
 
 #ifdef WLED_ENABLE_MQTT
+  JsonObject interfaces = doc.createNestedObject("if");
   JsonObject if_mqtt = interfaces.createNestedObject("mqtt");
   if_mqtt["psk"] = mqttPass;
 #endif
