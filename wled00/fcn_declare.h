@@ -201,13 +201,7 @@ void registerUsermods();
 void userSetup();
 void userConnected();
 void userLoop();
-void handleRelay(byte num);
-void forward();
-void reverse();
-void up();
-void down();
-void start();
-void end();
+void stall_Change();
 
 
 //util.cpp

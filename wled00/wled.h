@@ -24,11 +24,10 @@
 //#define WLED_DISABLE_OTA         // saves 14kb
 
 // You can choose some of these features to disable:
-#define WLED_DISABLE_ALEXA       // saves 11kb
-#define WLED_DISABLE_BLYNK       // saves 6kb
+#define WLED_DISABLE_ALEXA       // saves 11kb/#define WLED_DISABLE_BLYNK       // saves 6kb
 #define WLED_DISABLE_HUESYNC     // saves 4kb
 #define WLED_DISABLE_INFRARED    // saves 12kb, there is no pin left for this on ESP8266-01
-//#define WLED_DISABLE_MQTT
+#define WLED_DISABLE_MQTT
 #define WLED_DISABLE_WEBSOCKETS
 #define WLED_DISABLE_LOXONE
 #define WLED_DISABLE_2D
@@ -182,11 +181,11 @@ using PSRAMDynamicJsonDocument = BasicJsonDocument<PSRAM_Allocator>;
   #define WLED_HTTP_PASS DEFAULT_HTTP_PASS
 #endif
 
-#ifndef SPIFFS_EDITOR_AIRCOOOKIE
-  #error You are not using the Aircoookie fork of the ESPAsyncWebserver library.\
-  Using upstream puts your WiFi password at risk of being served by the filesystem.\
-  Comment out this error message to build regardless.
-#endif
+// #ifndef SPIFFS_EDITOR_AIRCOOOKIE
+//   #error You are not using the Aircoookie fork of the ESPAsyncWebserver library.\
+//   Using upstream puts your WiFi password at risk of being served by the filesystem.\
+//   Comment out this error message to build regardless.
+// #endif
 
 #ifndef WLED_DISABLE_INFRARED
   #include <IRremoteESP8266.h>

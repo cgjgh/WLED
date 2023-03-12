@@ -320,7 +320,7 @@ bool handleSet(AsyncWebServerRequest *request, const String& req, bool apply)
   //get command
   pos = req.indexOf(F("CM="));
   if (pos > 0) {
-   handleRelay(getNumVal(&req, pos));
+   //handleRelay(getNumVal(&req, pos));
   }
 
   return true;
