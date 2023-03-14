@@ -5,7 +5,14 @@
 /*
  * All globally accessible functions are declared here
  */
+//async_request.cpp
+void asyncRequestSetup();
+#ifdef HTTPSOnly
+void sendHttpsRequest(const char *method, const char *URL)
+#else
+void sendHttpRequest(const char* method, const char* URL);
 
+#endif
 //button.cpp
 void shortPressAction(uint8_t b=0);
 void longPressAction(uint8_t b=0);

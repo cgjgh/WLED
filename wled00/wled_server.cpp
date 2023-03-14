@@ -347,6 +347,8 @@ void initServer()
   server.addHandler(&ws);
   #endif
   
+  userWebServerSetup();
+
   //called when the url is not defined here, ajax-in; get-settings
   server.onNotFound([](AsyncWebServerRequest *request){
     DEBUG_PRINTLN("Not-Found HTTP call:");
