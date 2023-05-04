@@ -16,7 +16,6 @@
 
 // Level from 0-4
 #define ASYNC_HTTPS_DEBUG_PORT Serial
-
 #define _ASYNC_TCP_SSL_LOGLEVEL_ 1
 #define _ASYNC_HTTPS_LOGLEVEL_ 1
 
@@ -26,73 +25,35 @@
 // Use larger priority if necessary. Default is 10 if not defined here. Must be > 4 or adjusted to 4
 // #define CONFIG_ASYNC_TCP_PRIORITY   (12)
 
-// To be included only in main(), .ino with setup() to avoid `Multiple Definitions` Linker Error
-#ifdef HTTPSOnly
-#include <AsyncHTTPSRequest_Generic.h> // https://github.com/khoih-prog/AsyncHTTPSRequest_Generic
-AsyncHTTPSRequest httpsRequest;
-void sendHttpsRequest(const char *method, const char *URL)
-{
-  static bool requestOpenResult;
-
-  if (httpsRequest.readyState() == readyStateUnsent || httpsRequest.readyState() == readyStateDone)
-  {
-    // requestOpenResult = httpsRequest.open("GET", "https://worldtimeapi.org/api/timezone/Europe/London.txt");
-    // requestOpenResult = httpsRequest.open("GET", "https://worldtimeapi.org/api/timezone/America/Toronto.txt");
-    requestOpenResult = httpsRequest.open("GET", "https://worldtimeapi.org/api/timezone/America/Chicago.txt");
-
-    if (requestOpenResult)
-    {
-      // Only send() if open() returns true, or crash
-      httpsRequest.send();
-    }
-    else
-    {
-      Serial.println(F("Can't send bad request"));
-    }
-  }
-  else
-  {
-    Serial.println(F("Can't send request"));
-  }
-}
-
-void httpsRequestCB(void *optParm, AsyncHTTPSRequest *request, int readyState)
+void AsyncHTTPSWebRequest::httpsRequestCB(void *optParm, AsyncHTTPSRequest *request, int readyState)
 {
   (void)optParm;
 
   if (readyState == readyStateDone)
   {
-    AHTTPS_LOGDEBUG0(F("\n**************************************\n"));
-    AHTTPS_LOGDEBUG1(F("Response Code = "), request->responseHTTPString());
-
     if (request->responseHTTPcode() == 200)
     {
-      Serial.println(F("\n**************************************"));
-      Serial.println(request->responseText());
-      Serial.println(F("**************************************"));
+      responseStr = request->responseText();
+      newResponse = 1;
     }
 
     request->setDebug(false);
   }
 }
-#else
 
-#include <AsyncHTTPRequest_Generic.h> // https://github.com/khoih-prog/AsyncHTTPRequest_Generic
-AsyncHTTPRequest httpRequest;
-
-void sendHttpRequest(const char* method, const char* URL)
+void AsyncHTTPSWebRequest::sendHttpsRequest(const char *URL, const char *method)
 {
   static bool requestOpenResult;
 
-  if (httpRequest.readyState() == readyStateUnsent || httpRequest.readyState() == readyStateDone)
+  if (httpsRequest.readyState() == readyStateUnsent || httpsRequest.readyState() == readyStateDone)
   {
-    // requestOpenResult = request.open("GET", "http://worldtimeapi.org/api/timezone/Europe/London.txt");
-    requestOpenResult = httpRequest.open("GET", "http://worldtimeapi.org/api/timezone/America/Toronto.txt");
+    requestOpenResult = httpsRequest.open(method, URL);
 
     if (requestOpenResult)
     {
       // Only send() if open() returns true, or crash
-      httpRequest.send();
+      httpsRequest.send();
+      Serial.println("Request Sent");
     }
     else
     {
@@ -105,33 +66,87 @@ void sendHttpRequest(const char* method, const char* URL)
   }
 }
 
-void httpRequestCB(void *optParm, AsyncHTTPRequest *httpRequest, int readyState)
+void AsyncHTTPSWebRequest::sendDefaultHttpsRequest()
+{
+  sendHttpsRequest(defaultMethod, defaultURL);
+}
+
+
+void AsyncHTTPSWebRequest::init(AsyncHTTPSRequest::readyStateChangeCB cb, char *defURL, char *defMethod)
+{
+  httpsRequest.setDebug(false);
+  httpsRequest.onReadyStateChange(cb);
+  defaultURL = defURL;
+  defaultMethod = defaultMethod;
+}
+
+String AsyncHTTPSWebRequest::response()
+{
+ newResponse = 0;
+ return String(responseStr);
+}
+
+//--------------------------------------------
+
+//HTTP
+
+void AsyncHTTPWebRequest::httpRequestCB(void *optParm, AsyncHTTPRequest *request, int readyState)
 {
   (void)optParm;
 
   if (readyState == readyStateDone)
   {
-    AHTTP_LOGDEBUG(F("\n**************************************"));
-    AHTTP_LOGDEBUG1(F("Response Code = "), httpRequest->responseHTTPString());
-
-    if (httpRequest->responseHTTPcode() == 200)
+    if (request->responseHTTPcode() == 200)
     {
-      Serial.println(F("\n**************************************"));
-      Serial.println(httpRequest->responseText());
-      Serial.println(F("**************************************"));
+      responseStr = request->responseText();
+      newResponse = 1;
     }
+
+    request->setDebug(false);
   }
 }
-#endif
 
-// gets called every time WiFi is (re-)connected. Initialize own network interfaces here
-void asyncRequestSetup()
+void AsyncHTTPWebRequest::sendHttpRequest(const char *URL, const char *method)
 {
-#ifdef HTTPSOnly
-  httpsRequest.setDebug(false);
-  httpsRequest.onReadyStateChange(httpsRequestCB);
-#else
+  static bool requestOpenResult;
+
+  if (httpRequest.readyState() == readyStateUnsent || httpRequest.readyState() == readyStateDone)
+  {
+    requestOpenResult = httpRequest.open(method, URL);
+
+    if (requestOpenResult)
+    {
+      // Only send() if open() returns true, or crash
+      httpRequest.send();
+      Serial.println("Request Sent");
+    }
+    else
+    {
+      Serial.println(F("Can't send bad request"));
+    }
+  }
+  else
+  {
+    Serial.println(F("Can't send request"));
+  }
+}
+
+void AsyncHTTPWebRequest::sendDefaultHttpRequest()
+{
+  sendHttpRequest(defaultMethod, defaultURL);
+}
+
+
+void AsyncHTTPWebRequest::init(AsyncHTTPRequest::readyStateChangeCB cb, char *defURL, char *defMethod)
+{
   httpRequest.setDebug(false);
-  httpRequest.onReadyStateChange(httpRequestCB);
-#endif
+  httpRequest.onReadyStateChange(cb);
+  defaultURL = defURL;
+  defaultMethod = defaultMethod;
+}
+
+String AsyncHTTPWebRequest::response()
+{
+ newResponse = 0;
+ return String(responseStr);
 }

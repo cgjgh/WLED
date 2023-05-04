@@ -3,6 +3,7 @@
 #include "wled_ethernet.h"
 #include <Arduino.h>
 
+
 #if defined(ARDUINO_ARCH_ESP32) && defined(WLED_DISABLE_BROWNOUT_DET)
 #include "soc/soc.h"
 #include "soc/rtc_cntl_reg.h"
@@ -42,7 +43,7 @@ void WLED::loop()
   handleTime();
   handleIR();        // 2nd call to function needed for ESP32 to return valid results -- should be good for ESP8266, too
   handleConnection();
- 
+
   userLoop();
 
   #ifdef WLED_DEBUG
@@ -66,7 +67,7 @@ void WLED::loop()
 
   if (doSerializeConfig) serializeConfig();
 
-  if (doReboot) 
+  if (doReboot)
     reset();
 
   if (doCloseFile) {
@@ -74,7 +75,7 @@ void WLED::loop()
     yield();
   }
 
-  
+
     if (apActive) dnsServer.processNextRequest();
     #ifndef WLED_DISABLE_OTA
     if (WLED_CONNECTED && aOtaEnabled && !otaLock && correctPIN) ArduinoOTA.handle();
@@ -85,7 +86,7 @@ void WLED::loop()
     #ifdef WLED_DEBUG
     unsigned long stripMillis = millis();
     #endif
-    
+
     #ifdef ESP8266
     #else if (!noWifiSleep)
       delay(1); //required to make sure ESP enters modem sleep (see #1184)
@@ -96,7 +97,7 @@ void WLED::loop()
     avgStripMillis += stripMillis;
     if (stripMillis > maxStripMillis) maxStripMillis = stripMillis;
     #endif
-  
+
 
   yield();
 #ifdef ESP8266
@@ -313,7 +314,7 @@ void WLED::setup()
   if (!fsinit) {
     DEBUGFS_PRINTLN(F("FS failed!"));
     errorFlag = ERR_FS_BEGIN;
-  } 
+  }
 #ifdef WLED_ADD_EEPROM_SUPPORT
   else deEEP();
 #else
@@ -412,7 +413,7 @@ void WLED::initAP(bool resetAP)
     // if (udpPort2 > 0 && udpPort2 != ntpLocalPort && udpPort2 != udpPort && udpPort2 != udpRgbPort) {
     //   udp2Connected = notifier2Udp.begin(udpPort2);
     // }
-   
+
 
     dnsServer.setErrorReplyCode(DNSReplyCode::NoError);
     dnsServer.start(53, "*", WiFi.softAPIP());
@@ -481,10 +482,10 @@ bool WLED::initEthernet()
   }
 
   if (!ETH.begin(
-                (uint8_t) es.eth_address, 
-                (int)     es.eth_power, 
-                (int)     es.eth_mdc, 
-                (int)     es.eth_mdio, 
+                (uint8_t) es.eth_address,
+                (int)     es.eth_power,
+                (int)     es.eth_mdc,
+                (int)     es.eth_mdio,
                 (eth_phy_type_t)   es.eth_type,
                 (eth_clock_mode_t) es.eth_clk_mode
                 )) {

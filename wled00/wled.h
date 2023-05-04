@@ -12,7 +12,7 @@
 
 //uncomment this if you have a "my_config.h" file you'd like to use
 //#define WLED_USE_MY_CONFIG
-
+#define WLED_USE_NET_CONFIG
 // ESP8266-01 (blue) got too little storage space to work with WLED. 0.10.2 is the last release supporting this unit.
 
 // ESP8266-01 (black) has 1MB flash and can thus fit the whole program, although OTA update is not possible. Use 1M(128K SPIFFS).
@@ -31,6 +31,7 @@
 #define WLED_DISABLE_WEBSOCKETS
 #define WLED_DISABLE_LOXONE
 #define WLED_DISABLE_2D
+#define HTTPSOnly
 
 #ifndef WLED_DISABLE_MQTT
   #define WLED_ENABLE_MQTT         // saves 12kb
@@ -67,6 +68,8 @@
 // Library inclusions.
 #include <Arduino.h>
 #include <NoDelay.h>
+#include <AsyncHTTPRequest_Generic.hpp> // https://github.com/khoih-prog/AsyncHTTPRequest_Generic
+#include <AsyncHTTPSRequest_Generic.hpp> // https://github.com/khoih-prog/AsyncHTTPSRequest_Generic
 
 #ifdef ESP8266
   #include <ESP8266WiFi.h>
@@ -103,6 +106,10 @@
   #include "my_config.h"
 #endif
 
+#ifdef WLED_USE_NET_CONFIG
+  #include "net_config.h"
+#endif
+
 #ifdef WLED_DEBUG_HOST
 #include "net_debug.h"
 #endif
@@ -123,7 +130,7 @@
 #include "src/dependencies/toki/Toki.h"
 
 
-#include "src/dependencies/async-mqtt-client/AsyncMqttClient.h"
+//#include "src/dependencies/async-mqtt-client/AsyncMqttClient.h"
 
 #define ARDUINOJSON_DECODE_UNICODE 0
 #include "src/dependencies/json/AsyncJson-v6.h"
@@ -182,8 +189,8 @@ using PSRAMDynamicJsonDocument = BasicJsonDocument<PSRAM_Allocator>;
 #endif
 
 // #ifndef SPIFFS_EDITOR_AIRCOOOKIE
-//   #error You are not using the Aircoookie fork of the ESPAsyncWebserver library.\
-//   Using upstream puts your WiFi password at risk of being served by the filesystem.\
+//   #error You are not using the Aircoookie fork of the ESPAsyncWebserver library.
+//   Using upstream puts your WiFi password at risk of being served by the filesystem.
 //   Comment out this error message to build regardless.
 // #endif
 
@@ -278,11 +285,23 @@ WLED_GLOBAL char ntpServerName[33] _INIT("0.wled.pool.ntp.org");   // NTP server
 // WiFi CONFIG (all these can be changed via web UI, no need to set them here)
 WLED_GLOBAL char clientSSID[33] _INIT(CLIENT_SSID);
 WLED_GLOBAL char clientPass[65] _INIT(CLIENT_PASS);
+
+#ifndef SERVER_MDNS
 WLED_GLOBAL char cmDNS[33] _INIT("x");                             // mDNS address (placeholder, is replaced by wledXXXXXX.local)
+#else
+WLED_GLOBAL char cmDNS[33] _INIT(SERVER_MDNS);                             // mDNS address (placeholder, is replaced by wledXXXXXX.local)
+#endif
+
 WLED_GLOBAL char apSSID[33] _INIT("");                             // AP off by default (unless setup)
 WLED_GLOBAL byte apChannel _INIT(1);                               // 2.4GHz WiFi AP channel (1-13)
 WLED_GLOBAL byte apHide    _INIT(0);                               // hidden AP SSID
+
+#ifndef AP_BEHAVIOR
 WLED_GLOBAL byte apBehavior _INIT(AP_BEHAVIOR_BOOT_NO_CONN);       // access point opens when no connection after boot by default
+#else
+WLED_GLOBAL byte apBehavior _INIT(AP_BEHAVIOR);
+#endif
+
 WLED_GLOBAL IPAddress staticIP      _INIT_N(((  0,   0,  0,  0))); // static IP of ESP
 WLED_GLOBAL IPAddress staticGateway _INIT_N(((  0,   0,  0,  0))); // gateway (router) IP
 WLED_GLOBAL IPAddress staticSubnet  _INIT_N(((255, 255, 255, 0))); // most common subnet in home networks
@@ -442,7 +461,7 @@ WLED_GLOBAL AsyncWebServer server _INIT_N(((80)));
 WLED_GLOBAL AsyncWebSocket ws _INIT_N((("/ws")));
 #endif
 WLED_GLOBAL AsyncClient* hueClient _INIT(NULL);
-WLED_GLOBAL AsyncMqttClient* mqtt _INIT(NULL);
+//WLED_GLOBAL AsyncMqttClient* mqtt _INIT(NULL);
 WLED_GLOBAL AsyncWebHandler *editHandler _INIT(nullptr);
 
 // udp interface objects
@@ -563,12 +582,12 @@ WLED_GLOBAL volatile uint8_t jsonBufferLock _INIT(0);
 //macro to convert F to const
 #define SET_F(x)  (const char*)F(x)
 
-//color mangling macros
-#define RGBW32(r,g,b,w) (uint32_t((byte(w) << 24) | (byte(r) << 16) | (byte(g) << 8) | (byte(b))))
-#define R(c) (byte((c) >> 16))
-#define G(c) (byte((c) >> 8))
-#define B(c) (byte(c))
-#define W(c) (byte((c) >> 24))
+// //color mangling macros
+// #define RGBW32(r,g,b,w) (uint32_t((byte(w) << 24) | (byte(r) << 16) | (byte(g) << 8) | (byte(b))))
+// #define R(c) (byte((c) >> 16))
+// #define G(c) (byte((c) >> 8))
+// #define B(c) (byte(c))
+// #define W(c) (byte((c) >> 24))
 
 class WLED {
 public:
