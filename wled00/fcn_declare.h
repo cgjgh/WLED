@@ -280,6 +280,10 @@ bool isAsterisksOnly(const char *str, byte maxLen);
 bool requestJSONBufferLock(uint8_t module = 255);
 void releaseJSONBufferLock();
 
+String urlencode(String str);
+String urldecode(String str);
+unsigned char h2int(char c);
+
 #ifdef WLED_ADD_EEPROM_SUPPORT
 // wled_eeprom.cpp
 void applyMacro(byte index);
