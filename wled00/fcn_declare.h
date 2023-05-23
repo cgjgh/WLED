@@ -65,6 +65,7 @@ void deserializeConfigFromFS();
 bool deserializeConfigSec();
 void serializeConfig();
 void serializeConfigSec();
+void getStringFromJson(char* dest, const char* src, size_t len);
 
 template <typename DestType>
 bool getJsonValue(const JsonVariant &element, DestType &destination)
