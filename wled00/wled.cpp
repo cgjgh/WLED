@@ -89,9 +89,9 @@ void WLED::loop()
     yield();
 
 
-    #ifdef WLED_DEBUG
-    unsigned long stripMillis = millis();
-    #endif
+    // #ifdef WLED_DEBUG
+    // unsigned long stripMillis = millis();
+    // #endif
 
     #ifdef ESP8266
     #else if (!noWifiSleep)

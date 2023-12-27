@@ -69,9 +69,6 @@
 
 // Library inclusions.
 #include <Arduino.h>
-#include <NoDelay.h>
-#include <AsyncHTTPRequest_Generic.hpp> // https://github.com/khoih-prog/AsyncHTTPRequest_Generic
-#include <AsyncHTTPSRequest_Generic.hpp> // https://github.com/khoih-prog/AsyncHTTPSRequest_Generic
 
 #ifdef ESP8266
   #include <ESP8266WiFi.h>
@@ -429,10 +426,10 @@ WLED_GLOBAL bool showWelcomePage _INIT(false);
 WLED_GLOBAL byte improvActive _INIT(0); //0: no improv packet received, 1: improv active, 2: provisioning
 WLED_GLOBAL byte improvError _INIT(0);
 
-// mqtt
-WLED_GLOBAL unsigned long lastMqttReconnectAttempt _INIT(0);
-WLED_GLOBAL unsigned long lastInterfaceUpdate _INIT(0);
-WLED_GLOBAL char mqttStatusTopic[40] _INIT("");        // this must be global because of async handlers
+// // mqtt
+// WLED_GLOBAL unsigned long lastMqttReconnectAttempt _INIT(0);
+ WLED_GLOBAL unsigned long lastInterfaceUpdate _INIT(0);
+// WLED_GLOBAL char mqttStatusTopic[40] _INIT("");        // this must be global because of async handlers
 
 // alexa udp
 WLED_GLOBAL String escapedMac;
@@ -496,8 +493,7 @@ WLED_GLOBAL AsyncWebServer server _INIT_N(((80)));
 #ifdef WLED_ENABLE_WEBSOCKETS
 WLED_GLOBAL AsyncWebSocket ws _INIT_N((("/ws")));
 #endif
-WLED_GLOBAL AsyncClient* hueClient _INIT(NULL);
-WLED_GLOBAL AsyncMqttClient* mqtt _INIT(NULL);
+
 WLED_GLOBAL AsyncWebHandler *editHandler _INIT(nullptr);
 
 // udp interface objects

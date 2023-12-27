@@ -60,7 +60,6 @@ void handleUpload(AsyncWebServerRequest *request, const String& filename, size_t
       doReboot = true;
       request->send(200, "text/plain", F("Configuration restore successful.\nRebooting..."));
     } else {
-      if (filename.indexOf(F("palette")) >= 0 && filename.indexOf(F(".json")) >= 0) strip.loadCustomPalettes();
       request->send(200, "text/plain", F("File Uploaded!"));
     }
     cacheInvalidate++;
@@ -194,7 +193,7 @@ void initServer()
     if (verboseResponse) {
       if (!isConfig) {
         lastInterfaceUpdate = millis(); // prevent WS update until cooldown
-        interfaceUpdateCallMode = CALL_MODE_WS_SEND; // schedule WS update
+        //interfaceUpdateCallMode = CALL_MODE_WS_SEND; // schedule WS update
         serveJson(request); return; //if JSON contains "v"
       } else {
         doSerializeConfig = true; //serializeConfig(); //Save new settings to FS
@@ -224,12 +223,7 @@ void initServer()
     setStaticContentCacheHeaders(response);
     request->send(response);
   });
-    
-  //Deprecated, use of /json/state and presets recommended instead
-  server.on("/url", HTTP_GET, [](AsyncWebServerRequest *request){
-    URL_response(request);
-  });
-    
+ #endif
   server.on("/upload", HTTP_POST, [](AsyncWebServerRequest *request) {},
         [](AsyncWebServerRequest *request, const String& filename, size_t index, uint8_t *data,
                       size_t len, bool final) {handleUpload(request, filename, index, data, len, final);}
@@ -311,37 +305,6 @@ void initServer()
     } else {
       serveSettings(request);
     }
-  });
-
-  #ifdef WLED_ENABLE_PIXART
-  server.on("/pixart.htm", HTTP_GET, [](AsyncWebServerRequest *request){
-    if (handleFileRead(request, "/pixart.htm")) return;
-    if (handleIfNoneMatchCacheHeader(request)) return;
-    AsyncWebServerResponse *response = request->beginResponse_P(200, "text/html", PAGE_pixart, PAGE_pixart_L);
-    response->addHeader(FPSTR(s_content_enc),"gzip");
-    setStaticContentCacheHeaders(response);
-    request->send(response);
-  });
-  #endif
-
-  #ifndef WLED_DISABLE_PXMAGIC
-  server.on("/pxmagic.htm", HTTP_GET, [](AsyncWebServerRequest *request){
-    if (handleFileRead(request, "/pxmagic.htm")) return;
-    if (handleIfNoneMatchCacheHeader(request)) return;
-    AsyncWebServerResponse *response = request->beginResponse_P(200, "text/html", PAGE_pxmagic, PAGE_pxmagic_L);
-    response->addHeader(FPSTR(s_content_enc),"gzip");
-    setStaticContentCacheHeaders(response);
-    request->send(response);
-  });
-  #endif
-
-  server.on("/cpal.htm", HTTP_GET, [](AsyncWebServerRequest *request){
-    if (handleFileRead(request, "/cpal.htm")) return;
-    if (handleIfNoneMatchCacheHeader(request)) return;
-    AsyncWebServerResponse *response = request->beginResponse_P(200, "text/html", PAGE_cpal, PAGE_cpal_L);
-    response->addHeader(FPSTR(s_content_enc),"gzip");
-    setStaticContentCacheHeaders(response);
-    request->send(response);
   });
 
   #ifdef WLED_ENABLE_WEBSOCKETS
@@ -555,19 +518,14 @@ void serveSettings(AsyncWebServerRequest* request, bool post)
   switch (subPage)
   {
     case SUBPAGE_WIFI    : response = request->beginResponse_P(200, "text/html", PAGE_settings_wifi, PAGE_settings_wifi_length); break;
-    case SUBPAGE_LEDS    : response = request->beginResponse_P(200, "text/html", PAGE_settings_leds, PAGE_settings_leds_length); break;
     case SUBPAGE_UI      : response = request->beginResponse_P(200, "text/html", PAGE_settings_ui,   PAGE_settings_ui_length);   break;
     case SUBPAGE_SYNC    : response = request->beginResponse_P(200, "text/html", PAGE_settings_sync, PAGE_settings_sync_length); break;
     case SUBPAGE_TIME    : response = request->beginResponse_P(200, "text/html", PAGE_settings_time, PAGE_settings_time_length); break;
     case SUBPAGE_SEC     : response = request->beginResponse_P(200, "text/html", PAGE_settings_sec,  PAGE_settings_sec_length);  break;
-#ifdef WLED_ENABLE_DMX
-    case SUBPAGE_DMX     : response = request->beginResponse_P(200, "text/html", PAGE_settings_dmx,  PAGE_settings_dmx_length);  break;
-#endif
+
     case SUBPAGE_UM      : response = request->beginResponse_P(200, "text/html", PAGE_settings_um,   PAGE_settings_um_length);   break;
     case SUBPAGE_UPDATE  : response = request->beginResponse_P(200, "text/html", PAGE_update,        PAGE_update_length);        break;
-#ifndef WLED_DISABLE_2D
-    case SUBPAGE_2D      : response = request->beginResponse_P(200, "text/html", PAGE_settings_2D,   PAGE_settings_2D_length);   break;
-#endif
+
     case SUBPAGE_LOCK    : {
       correctPIN = !strlen(settingsPIN); // lock if a pin is set
       createEditHandler(correctPIN);

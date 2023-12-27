@@ -18,13 +18,13 @@ void callback(char* topic, byte* payload, unsigned int length) {
 
   // Switch on the LED if the first character is present
   if ((char)payload[0] != NULL) {
-    digitalWrite(LED_BUILTIN, LOW); // Turn the LED on (Note that LOW is the voltage level
+    //digitalWrite(LED_BUILTIN, LOW); // Turn the LED on (Note that LOW is the voltage level
     // but actually the LED is on; this is because
     // it is active low on the ESP-01)
     delay(500);
-    digitalWrite(LED_BUILTIN, HIGH); // Turn the LED off by making the voltage HIGH
+    //digitalWrite(LED_BUILTIN, HIGH); // Turn the LED off by making the voltage HIGH
   } else {
-    digitalWrite(LED_BUILTIN, HIGH); // Turn the LED off by making the voltage HIGH
+    //digitalWrite(LED_BUILTIN, HIGH); // Turn the LED off by making the voltage HIGH
   }
 }
 

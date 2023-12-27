@@ -40,78 +40,8 @@ typedef struct message_structure {
 
 static int esp_now_state = ESP_NOW_STATE_UNINIT;
 static uint32_t last_seq = UINT32_MAX;
-static int brightnessBeforeNightMode = NIGHT_MODE_DEACTIVATED;
 static message_structure incoming;
 
-// Pulled from the IR Remote logic but reduced to 10 steps with a constant of 3
-static const byte brightnessSteps[] = {
-  6, 9, 14, 22, 33, 50, 75, 113, 170, 255
-};
-static const size_t numBrightnessSteps = sizeof(brightnessSteps) / sizeof(uint8_t);
-
-static bool nightModeActive() {
-  return brightnessBeforeNightMode != NIGHT_MODE_DEACTIVATED;
-}
-
-static void activateNightMode() {
-  brightnessBeforeNightMode = bri;
-  bri = NIGHT_MODE_BRIGHTNESS;
-}
-
-static bool resetNightMode() {
-  if (!nightModeActive()) {
-    return false;
-  }
-  bri = brightnessBeforeNightMode;
-  brightnessBeforeNightMode = NIGHT_MODE_DEACTIVATED;
-  return true;
-}
-
-// increment `bri` to the next `brightnessSteps` value
-static void brightnessUp() {
-  if (nightModeActive()) { return; }
-  // dumb incremental search is efficient enough for so few items
-  for (uint8_t index = 0; index < numBrightnessSteps; ++index) {
-    if (brightnessSteps[index] > bri) {
-      bri = brightnessSteps[index];
-      break;
-    }
-  }
-}
-
-// decrement `bri` to the next `brightnessSteps` value
-static void brightnessDown() {
-  if (nightModeActive()) { return; }
-  // dumb incremental search is efficient enough for so few items
-  for (int index = numBrightnessSteps - 1; index >= 0; --index) {
-    if (brightnessSteps[index] < bri) {
-      bri = brightnessSteps[index];
-      break;
-    }
-  }
-}
-
-static void setOn() {
-  if (resetNightMode()) {
-    stateUpdated(CALL_MODE_BUTTON);
-  }
-  if (!bri) {
-    toggleOnOff(); 
-  }
-}
-
-static void setOff() {
-  if (resetNightMode()) {
-    stateUpdated(CALL_MODE_BUTTON);
-  }
-  if (bri) {
-    toggleOnOff(); 
-  }
-}
-
-static void presetWithFallback(uint8_t presetID, uint8_t effectID, uint8_t paletteID) {
-  applyPresetWithFallback(presetID, CALL_MODE_BUTTON_PRESET, effectID, paletteID);
-}
  
 // Callback function that will be executed when data is received
 #ifdef ESP8266
@@ -149,19 +79,19 @@ void OnDataRecv(const uint8_t * mac, const uint8_t *incomingData, int len) {
   DEBUG_PRINT(last_signal_src);
   DEBUG_PRINT(F("] button: "));
   DEBUG_PRINTLN(incoming.button);
-  switch (incoming.button) {
-    case WIZMOTE_BUTTON_ON             : setOn();                                         stateUpdated(CALL_MODE_BUTTON); break;
-    case WIZMOTE_BUTTON_OFF            : setOff();                                        stateUpdated(CALL_MODE_BUTTON); break;
-    case WIZMOTE_BUTTON_ONE            : presetWithFallback(1, FX_MODE_STATIC,        0); resetNightMode(); break;
-    case WIZMOTE_BUTTON_TWO            : presetWithFallback(2, FX_MODE_BREATH,        0); resetNightMode(); break;
-    case WIZMOTE_BUTTON_THREE          : presetWithFallback(3, FX_MODE_FIRE_FLICKER,  0); resetNightMode(); break;
-    case WIZMOTE_BUTTON_FOUR           : presetWithFallback(4, FX_MODE_RAINBOW,       0); resetNightMode(); break;
-    case WIZMOTE_BUTTON_NIGHT          : activateNightMode();                             stateUpdated(CALL_MODE_BUTTON); break;
-    case WIZMOTE_BUTTON_BRIGHT_UP      : brightnessUp();                                  stateUpdated(CALL_MODE_BUTTON); break;
-    case WIZMOTE_BUTTON_BRIGHT_DOWN    : brightnessDown();                                stateUpdated(CALL_MODE_BUTTON); break;
-    default: break;
+  // switch (incoming.button) {
+  //   case WIZMOTE_BUTTON_ON             : setOn();                                         stateUpdated(CALL_MODE_BUTTON); break;
+  //   case WIZMOTE_BUTTON_OFF            : setOff();                                        stateUpdated(CALL_MODE_BUTTON); break;
+  //   case WIZMOTE_BUTTON_ONE            : presetWithFallback(1, FX_MODE_STATIC,        0); resetNightMode(); break;
+  //   case WIZMOTE_BUTTON_TWO            : presetWithFallback(2, FX_MODE_BREATH,        0); resetNightMode(); break;
+  //   case WIZMOTE_BUTTON_THREE          : presetWithFallback(3, FX_MODE_FIRE_FLICKER,  0); resetNightMode(); break;
+  //   case WIZMOTE_BUTTON_FOUR           : presetWithFallback(4, FX_MODE_RAINBOW,       0); resetNightMode(); break;
+  //   case WIZMOTE_BUTTON_NIGHT          : activateNightMode();                             stateUpdated(CALL_MODE_BUTTON); break;
+  //   case WIZMOTE_BUTTON_BRIGHT_UP      : brightnessUp();                                  stateUpdated(CALL_MODE_BUTTON); break;
+  //   case WIZMOTE_BUTTON_BRIGHT_DOWN    : brightnessDown();                                stateUpdated(CALL_MODE_BUTTON); break;
+  //   default: break;
 
-  }
+  // }
 
   last_seq = cur_seq;
 }

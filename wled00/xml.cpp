@@ -336,7 +336,7 @@ void getSettingsJS(byte subPage, char* dest)
 
   // if (subPage == 2)
   // {
-  //   char nS[8];
+     char nS[8];
 
   //   appendGPIOinfo();
 
@@ -452,7 +452,8 @@ void getSettingsJS(byte subPage, char* dest)
 
   if (subPage == SUBPAGE_SYNC)
   {
-  
+    char nS[8];
+    
     #ifdef WLED_ENABLE_MQTT
     sappend('c',SET_F("MQ"),mqttEnabled);
     sappends('s',SET_F("MS"),mqttServer);

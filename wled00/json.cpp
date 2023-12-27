@@ -34,7 +34,7 @@ bool deserializeState(JsonObject root)
     handleSet(nullptr, apireq, false);    // may set stateChanged
   }
 
-  stateUpdated(callMode);
+  //stateUpdated(callMode);
   return stateResponse;
 }
 void serializeState(JsonObject root, bool forPreset, bool includeBri, bool segmentBounds, bool selectedSegmentsOnly)
@@ -68,9 +68,7 @@ void serializeInfo(JsonObject root)
   JsonObject fs_info = root.createNestedObject("fs");
   fs_info["u"] = fsBytesUsed / 1000;
   fs_info["t"] = fsBytesTotal / 1000;
-  fs_info[F("pmt")] = presetsModifiedTime;
 
-  root[F("ndc")] = nodeListEnabled ? (int)Nodes.size() : -1;
 
   #ifdef ARDUINO_ARCH_ESP32
   #ifdef WLED_DEBUG
@@ -169,23 +167,6 @@ void serializeNetworks(JsonObject root)
   }
 }
 
-void serializeNodes(JsonObject root)
-{
-  JsonArray nodes = root.createNestedArray("nodes");
-
-  for (NodesMap::iterator it = Nodes.begin(); it != Nodes.end(); ++it)
-  {
-    if (it->second.ip[0] != 0)
-    {
-      JsonObject node = nodes.createNestedObject();
-      node[F("name")] = it->second.nodeName;
-      node["type"]    = it->second.nodeType;
-      node["ip"]      = it->second.ip.toString();
-      node[F("age")]  = it->second.age;
-      node[F("vid")]  = it->second.build;
-    }
-  }
-}
 
 void serveJson(AsyncWebServerRequest* request)
 {
@@ -218,8 +199,6 @@ void serveJson(AsyncWebServerRequest* request)
       serializeState(lDoc); break;
     case JSON_PATH_INFO:
       serializeInfo(lDoc); break;
-    case JSON_PATH_NODES:
-      serializeNodes(lDoc); break;
     case JSON_PATH_NETWORKS:
       serializeNetworks(lDoc); break;
     default: //all

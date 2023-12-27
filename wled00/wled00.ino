@@ -12,9 +12,6 @@
  */
 #include "wled.h"
 
-#include <AsyncHTTPRequest_Generic.h> // https://github.com/khoih-prog/AsyncHTTPSRequest_Generic
-#include <AsyncHTTPSRequest_Generic.h> // https://github.com/khoih-prog/AsyncHTTPRequest_Generic
-
 void setup() {
   WLED::instance().setup();
 }
