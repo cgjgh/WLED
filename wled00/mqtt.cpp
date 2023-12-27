@@ -74,6 +74,7 @@ void onMqttConnect(bool sessionPresent)
 
 
 void onMqttMessage(char* topic, char* payload, AsyncMqttClientMessageProperties properties, size_t len, size_t index, size_t total) {
+  static char *payloadStr;
 
   DEBUG_PRINT(F("MQTT msg: "));
   DEBUG_PRINTLN(topic);
@@ -83,11 +84,22 @@ void onMqttMessage(char* topic, char* payload, AsyncMqttClientMessageProperties 
     DEBUG_PRINTLN(F("no payload -> leave"));
     return;
   }
-  //make a copy of the payload to 0-terminate it
-  char* payloadStr = new char[len+1];
-  if (payloadStr == nullptr) return; //no mem
-  strncpy(payloadStr, payload, len);
-  payloadStr[len] = '\0';
+
+  if (index == 0) {                       // start (1st partial packet or the only packet)
+    if (payloadStr) delete[] payloadStr;  // fail-safe: release buffer
+    payloadStr = new char[total+1];       // allocate new buffer
+  }
+  if (payloadStr == nullptr) return;      // buffer not allocated
+
+  // copy (partial) packet to buffer and 0-terminate it if it is last packet
+  char* buff = payloadStr + index;
+  memcpy(buff, payload, len);
+  if (index + len >= total) { // at end
+    payloadStr[total] = '\0'; // terminate c style string
+  } else {
+    DEBUG_PRINTLN(F("Partial packet received."));
+    return; // process next packet
+  }
   DEBUG_PRINTLN(payloadStr);
 
   size_t topicPrefixLen = strlen(mqttDeviceTopic);
@@ -131,6 +143,7 @@ void onMqttMessage(char* topic, char* payload, AsyncMqttClientMessageProperties 
   //   parseMQTTBriPayload(payloadStr);
   // }
   delete[] payloadStr;
+  payloadStr = nullptr;
 }
 
 
@@ -200,8 +213,4 @@ bool initMqtt()
   mqtt->connect();
   return true;
 }
-
-#else
-bool initMqtt(){return false;}
-void publishMqtt(){}
 #endif

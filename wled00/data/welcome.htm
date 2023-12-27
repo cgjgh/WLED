@@ -1,61 +1,61 @@
 <!DOCTYPE html>
 <html>
-<head>
-  <meta charset="utf-8">
-	<meta content='width=device-width' name='viewport'>
-  <meta name="theme-color" content="#222222">
-	<title>Welcome!</title>
-	<style>
-		body {
-			font-family: Verdana, Helvetica, sans-serif;
-			text-align: center;
-			background-color: #222;
-			margin: 0;
-			color: #fff;
-		}
-    
-    button {
-      outline: none;
-      cursor: pointer;
-      padding: 8px;
-      margin: 10px;
-      width: 230px;
-      text-transform: uppercase;
-      font-family: helvetica;
-      font-size: 19px;
-      background-color: #333;
-      color: white;
-      border: 0px solid white;
-      border-radius: 25px;
-    }
+	<head>
+		<meta charset="utf-8">
+		<meta content='width=device-width' name='viewport'>
+		<meta name="theme-color" content="#222222">
+		<title>Welcome!</title>
+		<style>
+			body {
+				font-family: Verdana, Helvetica, sans-serif;
+				text-align: center;
+				background-color: #222;
+				margin: 0;
+				color: #fff;
+			}
+	
+			button {
+				outline: none;
+				cursor: pointer;
+				padding: 8px;
+				margin: 10px;
+				width: 230px;
+				text-transform: uppercase;
+				font-family: helvetica;
+				font-size: 19px;
+				background-color: #333;
+				color: white;
+				border: 0px solid white;
+				border-radius: 25px;
+			}
 
-    img {
-      width: 950px;
-      max-width: 82%;
-      image-rendering: pixelated;
-      image-rendering: crisp-edges;
-      margin: 4vh 0 0 0;
-      animation: fi 1s;
-    }
-    
-    @keyframes fi {
-    from { opacity: 0; }
-    to   { opacity: 1; }
-    }
-    
-    .main {
-      animation: fi 1.5s .7s both;
-    }
-	</style>
-</head>
-<body>
-<div class="main">
-<h1>Welcome to ESP!</h1>
-<b>Next steps:</b><br><br>
-Connect the module to your local WiFi here!<br>
-<button onclick="window.location.href='/settings/wifi'">WiFi settings</button><br>
-<i>Just trying this out in AP mode?</i><br>
-<button onclick="window.location.href='/relay'">To the controls!</button><br>
-</div>
-</body>
+			img {
+				width: 950px;
+				max-width: 82%;
+				image-rendering: pixelated;
+				image-rendering: crisp-edges;
+				margin: 4vh 0 0 0;
+				animation: fi 1s;
+			}
+			
+			@keyframes fi {
+				from { opacity: 0; }
+				to   { opacity: 1; }
+			}
+	
+			.main {
+				animation: fi 1.5s .7s both;
+			}
+		</style>
+	</head>
+	<body>
+		<div class="main">
+			<h1>Welcome to ESP!</h1>
+			<b>Next steps:</b><br><br>
+			Connect the module to your local WiFi here!<br>
+			<button onclick="window.location.href='./settings/wifi'">WiFi settings</button><br>
+			<i>Just trying this out in AP mode?</i><br>
+			<button onclick="window.location.href='./?home'">To the controls!</button><br>
+		</div>
+	</body>
 </html>

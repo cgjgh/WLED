@@ -5,51 +5,6 @@
 /*
  * All globally accessible functions are declared here
  */
-// async_request.cpp
-class AsyncHTTPSWebRequest
-{
-private:
-  String responseStr;
-  
-public:
-  
-  bool newResponse;
-  char *defaultURL = "";
-  char *defaultMethod = "GET";
-  AsyncHTTPSRequest httpsRequest;
-
-  String response();
-  void httpsRequestCB(void *optParm, AsyncHTTPSRequest *request, int readyState);
-  void sendHttpsRequest(const char *URL, const char *method);
-  void sendDefaultHttpsRequest();
-  void init(AsyncHTTPSRequest::readyStateChangeCB cb, char *defURL = "", char *defMethod = "");
-  AsyncHTTPSWebRequest(AsyncHTTPSRequest::readyStateChangeCB cb) {init(cb);}
-  AsyncHTTPSWebRequest(AsyncHTTPSRequest::readyStateChangeCB cb, char *defURL, char *defMethod) {init(cb,defURL,defMethod);}
-};
-
-class AsyncHTTPWebRequest
-{
-private:
-  String responseStr;
-  
-public:
-  
-  bool newResponse;
-  char *defaultURL = "";
-  char *defaultMethod = "GET";
-  AsyncHTTPRequest httpRequest;
-
-  String response();
-  void httpRequestCB(void *optParm, AsyncHTTPRequest *request, int readyState);
-  void sendHttpRequest(const char *URL, const char *method);
-  void sendDefaultHttpRequest();
-  void init(AsyncHTTPRequest::readyStateChangeCB cb, char *defURL = "", char *defMethod = "");
-  AsyncHTTPWebRequest(AsyncHTTPRequest::readyStateChangeCB cb) {init(cb);}
-  AsyncHTTPWebRequest(AsyncHTTPRequest::readyStateChangeCB cb, char *defURL, char *defMethod) {init(cb,defURL,defMethod);}
-};
-
-void sheetsRequestCB(void *optParm, AsyncHTTPSRequest *request, int readyState);
-void controlRequestCB(void *optParm, AsyncHTTPRequest *request, int readyState);
 
 // button.cpp
 void shortPressAction(uint8_t b = 0);
@@ -91,20 +46,14 @@ bool getJsonValue(const JsonVariant &element, DestType &destination, const Defau
   return true;
 }
 
-// file.cpp
-bool handleFileRead(AsyncWebServerRequest *, String path);
-bool writeObjectToFileUsingId(const char *file, uint16_t id, JsonDocument *content);
-bool writeObjectToFile(const char *file, const char *key, JsonDocument *content);
-bool readObjectFromFileUsingId(const char *file, uint16_t id, JsonDocument *dest);
-bool readObjectFromFile(const char *file, const char *key, JsonDocument *dest);
+//file.cpp
+bool handleFileRead(AsyncWebServerRequest*, String path);
+bool writeObjectToFileUsingId(const char* file, uint16_t id, JsonDocument* content);
+bool writeObjectToFile(const char* file, const char* key, JsonDocument* content);
+bool readObjectFromFileUsingId(const char* file, uint16_t id, JsonDocument* dest);
+bool readObjectFromFile(const char* file, const char* key, JsonDocument* dest);
 void updateFSInfo();
 void closeFile();
-
-// improv.cpp
-void handleImprovPacket();
-void sendImprovStateResponse(uint8_t state, bool error = false);
-void sendImprovInfoResponse();
-void sendImprovRPCResponse(uint8_t commandId);
 
 // ir.cpp
 void applyRepeatActions();
@@ -150,8 +99,11 @@ void getTimeString(char *out);
 void calculateSunriseAndSunset();
 void setTimeFromAPI(uint32_t timein);
 
-// set.cpp
-bool isAsterisksOnly(const char *str, byte maxLen);
+//remote.cpp
+void handleRemote();
+
+//set.cpp
+bool isAsterisksOnly(const char* str, byte maxLen);
 void handleSettingsSet(AsyncWebServerRequest *request, byte subPage);
 bool handleSet(AsyncWebServerRequest *request, const String &req, bool apply = true);
 
@@ -199,38 +151,29 @@ typedef struct UM_Exchange_Data
 } um_data_t;
 const unsigned int um_data_size = sizeof(um_data_t); // 12 bytes
 
-class Usermod
-{
-protected:
-  um_data_t *um_data; // um_data should be allocated using new in (derived) Usermod's setup() or constructor
-public:
-  Usermod() { um_data = nullptr; }
-  virtual ~Usermod()
-  {
-    if (um_data)
-      delete um_data;
-  }
-  virtual void setup() = 0; // pure virtual, has to be overriden
-  virtual void loop() = 0;  // pure virtual, has to be overriden
-  virtual void handleOverlayDraw() {}
-  virtual bool handleButton(uint8_t b) { return false; }
-  virtual bool getUMData(um_data_t **data)
-  {
-    if (data)
-      *data = nullptr;
-    return false;
-  };
-  virtual void connected() {}
-  virtual void appendConfigData() {}
-  virtual void addToJsonState(JsonObject &obj) {}
-  virtual void addToJsonInfo(JsonObject &obj) {}
-  virtual void readFromJsonState(JsonObject &obj) {}
-  virtual void addToConfig(JsonObject &obj) {}
-  virtual bool readFromConfig(JsonObject &obj) { return true; } // Note as of 2021-06 readFromConfig() now needs to return a bool, see usermod_v2_example.h
-  virtual void onMqttConnect(bool sessionPresent) {}
-  virtual bool onMqttMessage(char *topic, char *payload) { return false; }
-  virtual void onUpdateBegin(bool) {}
-  virtual uint16_t getId() { return USERMOD_ID_UNSPECIFIED; }
+class Usermod {
+  protected:
+    um_data_t *um_data; // um_data should be allocated using new in (derived) Usermod's setup() or constructor
+  public:
+    Usermod() { um_data = nullptr; }
+    virtual ~Usermod() { if (um_data) delete um_data; }
+    virtual void setup() = 0; // pure virtual, has to be overriden
+    virtual void loop() = 0;  // pure virtual, has to be overriden
+    virtual void handleOverlayDraw() {}                                      // called after all effects have been processed, just before strip.show()
+    virtual bool handleButton(uint8_t b) { return false; }                   // button overrides are possible here
+    virtual bool getUMData(um_data_t **data) { if (data) *data = nullptr; return false; }; // usermod data exchange [see examples for audio effects]
+    virtual void connected() {}                                              // called when WiFi is (re)connected
+    virtual void appendConfigData() {}                                       // helper function called from usermod settings page to add metadata for entry fields
+    virtual void addToJsonState(JsonObject& obj) {}                          // add JSON objects for WLED state
+    virtual void addToJsonInfo(JsonObject& obj) {}                           // add JSON objects for UI Info page
+    virtual void readFromJsonState(JsonObject& obj) {}                       // process JSON messages received from web server
+    virtual void addToConfig(JsonObject& obj) {}                             // add JSON entries that go to cfg.json
+    virtual bool readFromConfig(JsonObject& obj) { return true; } // Note as of 2021-06 readFromConfig() now needs to return a bool, see usermod_v2_example.h
+    virtual void onMqttConnect(bool sessionPresent) {}                       // fired when MQTT connection is established (so usermod can subscribe)
+    virtual bool onMqttMessage(char* topic, char* payload) { return false; } // fired upon MQTT message received (wled topic)
+    virtual void onUpdateBegin(bool) {}                                      // fired prior to and after unsuccessful firmware update
+    virtual void onStateChange(uint8_t mode) {}                              // fired upon WLED state change
+    virtual uint16_t getId() {return USERMOD_ID_UNSPECIFIED;}
 };
 
 class UsermodManager
@@ -239,25 +182,26 @@ private:
   Usermod *ums[WLED_MAX_USERMODS];
   byte numMods = 0;
 
-public:
-  void loop();
-  void handleOverlayDraw();
-  bool handleButton(uint8_t b);
-  bool getUMData(um_data_t **um_data, uint8_t mod_id = USERMOD_ID_RESERVED); // USERMOD_ID_RESERVED will poll all usermods
-  void setup();
-  void connected();
-  void appendConfigData();
-  void addToJsonState(JsonObject &obj);
-  void addToJsonInfo(JsonObject &obj);
-  void readFromJsonState(JsonObject &obj);
-  void addToConfig(JsonObject &obj);
-  bool readFromConfig(JsonObject &obj);
-  void onMqttConnect(bool sessionPresent);
-  bool onMqttMessage(char *topic, char *payload);
-  void onUpdateBegin(bool);
-  bool add(Usermod *um);
-  Usermod *lookup(uint16_t mod_id);
-  byte getModCount() { return numMods; };
+  public:
+    void loop();
+    void handleOverlayDraw();
+    bool handleButton(uint8_t b);
+    bool getUMData(um_data_t **um_data, uint8_t mod_id = USERMOD_ID_RESERVED); // USERMOD_ID_RESERVED will poll all usermods
+    void setup();
+    void connected();
+    void appendConfigData();
+    void addToJsonState(JsonObject& obj);
+    void addToJsonInfo(JsonObject& obj);
+    void readFromJsonState(JsonObject& obj);
+    void addToConfig(JsonObject& obj);
+    bool readFromConfig(JsonObject& obj);
+    void onMqttConnect(bool sessionPresent);
+    bool onMqttMessage(char* topic, char* payload);
+    void onUpdateBegin(bool);
+    void onStateChange(uint8_t);
+    bool add(Usermod* um);
+    Usermod* lookup(uint16_t mod_id);
+    byte getModCount() {return numMods;};
 };
 
 // usermods_list.cpp
@@ -284,6 +228,8 @@ void releaseJSONBufferLock();
 String urlencode(String str);
 String urldecode(String str);
 unsigned char h2int(char c);
+void checkSettingsPIN(const char *pin);
+uint16_t crc16(const unsigned char* data_p, size_t length);
 
 #ifdef WLED_ADD_EEPROM_SUPPORT
 // wled_eeprom.cpp
@@ -322,12 +268,11 @@ void createEditHandler(bool enable);
 bool captivePortal(AsyncWebServerRequest *request);
 void initServer();
 void serveIndexOrWelcome(AsyncWebServerRequest *request);
-void serveIndex(AsyncWebServerRequest *request);
-String msgProcessor(const String &var);
-void serveMessage(AsyncWebServerRequest *request, uint16_t code, const String &headl, const String &subl = "", byte optionT = 255);
-String settingsProcessor(const String &var);
-void serveSettings(AsyncWebServerRequest *request, bool post = false);
-void serveSettingsJS(AsyncWebServerRequest *request);
+void serveIndex(AsyncWebServerRequest* request);
+String msgProcessor(const String& var);
+void serveMessage(AsyncWebServerRequest* request, uint16_t code, const String& headl, const String& subl="", byte optionT=255);
+void serveSettings(AsyncWebServerRequest* request, bool post = false);
+void serveSettingsJS(AsyncWebServerRequest* request);
 
 // ws.cpp
 void handleWs();

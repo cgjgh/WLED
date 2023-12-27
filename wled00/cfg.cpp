@@ -61,7 +61,7 @@ bool deserializeConfig(JsonObject doc, bool fromFS) {
   if (apHide > 1) apHide = 1;
 
   CJSON(apBehavior, ap[F("behav")]);
-  
+
   /*
   JsonArray ap_ip = ap["ip"];
   for (byte i = 0; i < 4; i++) {
@@ -77,11 +77,13 @@ bool deserializeConfig(JsonObject doc, bool fromFS) {
 
   // read multiple button configuration
   JsonObject btn_obj = hw["btn"];
-  int pull = -1; // trick for inverted setting
-  CJSON(pull, btn_obj[F("pull")]);
-  if (pull>=0) disablePullUp = pull;
+  bool pull = btn_obj[F("pull")] | (!disablePullUp); // if true, pullup is enabled
+  disablePullUp = !pull;
   JsonArray hw_btn_ins = btn_obj[F("ins")];
   if (!hw_btn_ins.isNull()) {
+    for (uint8_t b = 0; b < WLED_MAX_BUTTONS; b++) { // deallocate existing button pins
+      pinManager.deallocatePin(btnPin[b], PinOwner::Button); // does nothing if trying to deallocate a pin with PinOwner != Button
+    }
     uint8_t s = 0;
     for (JsonObject btn : hw_btn_ins) {
       CJSON(buttonType[s], btn["type"]);
@@ -90,14 +92,16 @@ bool deserializeConfig(JsonObject doc, bool fromFS) {
         btnPin[s] = pin;
       #ifdef ARDUINO_ARCH_ESP32
         // ESP32 only: check that analog button pin is a valid ADC gpio
-        if (((buttonType[s] == BTN_TYPE_ANALOG) || (buttonType[s] == BTN_TYPE_ANALOG_INVERTED)) && (digitalPinToAnalogChannel(btnPin[s]) < 0)) 
+        if (((buttonType[s] == BTN_TYPE_ANALOG) || (buttonType[s] == BTN_TYPE_ANALOG_INVERTED)) && (digitalPinToAnalogChannel(btnPin[s]) < 0))
         {
           // not an ADC analog pin
-          DEBUG_PRINTF("PIN ALLOC error: GPIO%d for analog button #%d is not an analog pin!\n", btnPin[s], s);
+          DEBUG_PRINT(F("PIN ALLOC error: GPIO")); DEBUG_PRINT(btnPin[s]);
+          DEBUG_PRINT(F("for analog button #")); DEBUG_PRINT(s);
+          DEBUG_PRINTLN(F(" is not an analog pin!"));
           btnPin[s] = -1;
           pinManager.deallocatePin(pin,PinOwner::Button);
-        } 
-        else 
+        }
+        else
       #endif
         {
           if (disablePullUp) {
@@ -133,7 +137,7 @@ bool deserializeConfig(JsonObject doc, bool fromFS) {
       // relies upon only being called once with fromFS == true, which is currently true.
       uint8_t s = 0;
       if (pinManager.allocatePin(btnPin[0], false, PinOwner::Button)) { // initialized to #define value BTNPIN, or zero if not defined(!)
-        ++s; // do not clear default button if allocated successfully 
+        ++s; // do not clear default button if allocated successfully
       }
       for (; s<WLED_MAX_BUTTONS; s++) {
         btnPin[s]           = -1;
@@ -149,6 +153,7 @@ bool deserializeConfig(JsonObject doc, bool fromFS) {
 
   int hw_ir_pin = hw["ir"]["pin"] | -2; // 4
   if (hw_ir_pin > -2) {
+    pinManager.deallocatePin(irPin, PinOwner::IR);
     if (pinManager.allocatePin(hw_ir_pin, false, PinOwner::IR)) {
       irPin = hw_ir_pin;
     } else {
@@ -160,6 +165,7 @@ bool deserializeConfig(JsonObject doc, bool fromFS) {
   JsonObject relay = hw[F("relay")];
   int hw_relay_pin = relay["pin"] | -2;
   if (hw_relay_pin > -2) {
+    pinManager.deallocatePin(rlyPin, PinOwner::Relay);
     if (pinManager.allocatePin(hw_relay_pin,true, PinOwner::Relay)) {
       rlyPin = hw_relay_pin;
       pinMode(rlyPin, OUTPUT);
@@ -178,9 +184,11 @@ bool deserializeConfig(JsonObject doc, bool fromFS) {
   PinManagerPinType i2c[2] = { { i2c_sda, true }, { i2c_scl, true } };
   if (i2c_scl >= 0 && i2c_sda >= 0 && pinManager.allocateMultiplePins(i2c, 2, PinOwner::HW_I2C)) {
     #ifdef ESP32
-    Wire.setPins(i2c_sda, i2c_scl); // this will fail if Wire is initilised (Wire.begin() called prior)
+    if (!Wire.setPins(i2c_sda, i2c_scl)) { i2c_scl = i2c_sda = -1; } // this will fail if Wire is initialised (Wire.begin() called prior)
+    else Wire.begin();
+    #else
+    Wire.begin(i2c_sda, i2c_scl);
     #endif
-    Wire.begin();
   } else {
     i2c_sda = -1;
     i2c_scl = -1;
@@ -209,16 +217,22 @@ bool deserializeConfig(JsonObject doc, bool fromFS) {
 #ifdef WLED_ENABLE_MQTT
   JsonObject if_mqtt = interfaces["mqtt"];
   CJSON(mqttEnabled, if_mqtt["en"]);
-  getStringFromJson(mqttServer, if_mqtt[F("broker")], 33);
+  getStringFromJson(mqttServer, if_mqtt[F("broker")], MQTT_MAX_SERVER_LEN+1);
   CJSON(mqttPort, if_mqtt["port"]); // 1883
   getStringFromJson(mqttUser, if_mqtt[F("user")], 41);
   getStringFromJson(mqttPass, if_mqtt["psk"], 65); //normally not present due to security
   getStringFromJson(mqttClientID, if_mqtt[F("cid")], 41);
 
-  getStringFromJson(mqttDeviceTopic, if_mqtt[F("topics")][F("device")], 33); // "wled/test"
-  getStringFromJson(mqttGroupTopic, if_mqtt[F("topics")][F("group")], 33); // ""
+  getStringFromJson(mqttDeviceTopic, if_mqtt[F("topics")][F("device")], MQTT_MAX_TOPIC_LEN+1); // "wled/test"
+  getStringFromJson(mqttGroupTopic, if_mqtt[F("topics")][F("group")], MQTT_MAX_TOPIC_LEN+1); // ""
+  CJSON(retainMqttMsg, if_mqtt[F("rtn")]);
 #endif
 
+#ifndef WLED_DISABLE_ESPNOW
+  JsonObject remote = doc["remote"];
+  CJSON(enable_espnow_remote, remote[F("remote_enabled")]);
+  getStringFromJson(linked_remote, remote[F("linked_remote")], 13);
+#endif
   JsonObject if_ntp = interfaces[F("ntp")];
   CJSON(ntpEnabled, if_ntp["en"]);
   getStringFromJson(ntpServerName, if_ntp[F("host")], 33); // "1.wled.pool.ntp.org"
@@ -428,10 +442,17 @@ void serializeConfig() {
   if_mqtt[F("user")] = mqttUser;
   if_mqtt[F("pskl")] = strlen(mqttPass);
   if_mqtt[F("cid")] = mqttClientID;
+  if_mqtt[F("rtn")] = retainMqttMsg;
 
   JsonObject if_mqtt_topics = if_mqtt.createNestedObject(F("topics"));
   if_mqtt_topics[F("device")] = mqttDeviceTopic;
   if_mqtt_topics[F("group")] = mqttGroupTopic;
+#endif
+
+#ifndef WLED_DISABLE_ESPNOW
+  JsonObject remote = doc.createNestedObject(F("remote"));
+  remote[F("remote_enabled")] = enable_espnow_remote;
+  remote[F("linked_remote")] = linked_remote;
 #endif
 
   JsonObject if_ntp = interfaces.createNestedObject("ntp");
@@ -479,6 +500,8 @@ bool deserializeConfigSec() {
   JsonObject ap = doc["ap"];
   getStringFromJson(apPass, ap["psk"] , 65);
 
+  [[maybe_unused]] JsonObject interfaces = doc["if"];
+
 #ifdef WLED_ENABLE_MQTT
   JsonObject interfaces = doc.createNestedObject("if");
   JsonObject if_mqtt = interfaces["mqtt"];
@@ -513,6 +536,7 @@ void serializeConfigSec() {
   JsonObject ap = doc.createNestedObject("ap");
   ap["psk"] = apPass;
 
+  [[maybe_unused]] JsonObject interfaces = doc.createNestedObject("if");
 #ifdef WLED_ENABLE_MQTT
   JsonObject interfaces = doc.createNestedObject("if");
   JsonObject if_mqtt = interfaces.createNestedObject("mqtt");

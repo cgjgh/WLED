@@ -8,6 +8,7 @@
 #define JSON_PATH_PALETTES   5
 #define JSON_PATH_FXDATA     6
 #define JSON_PATH_NETWORKS   7
+#define JSON_PATH_EFFECTS    8
 
 /*
  * JSON API (De)serialization
@@ -24,9 +25,18 @@ bool deserializeState(JsonObject root)
   #endif
 
   usermods.readFromJsonState(root);
+
+  // HTTP API commands (must be handled before "ps")
+  const char* httpwin = root["win"];
+  if (httpwin) {
+    String apireq = "win"; apireq += '&'; // reduce flash string usage
+    apireq += httpwin;
+    handleSet(nullptr, apireq, false);    // may set stateChanged
+  }
+
+  stateUpdated(callMode);
   return stateResponse;
 }
-
 void serializeState(JsonObject root, bool forPreset, bool includeBri, bool segmentBounds, bool selectedSegmentsOnly)
 {
     usermods.addToJsonState(root);
@@ -60,6 +70,8 @@ void serializeInfo(JsonObject root)
   fs_info["t"] = fsBytesTotal / 1000;
   fs_info[F("pmt")] = presetsModifiedTime;
 
+  root[F("ndc")] = nodeListEnabled ? (int)Nodes.size() : -1;
+
   #ifdef ARDUINO_ARCH_ESP32
   #ifdef WLED_DEBUG
     wifi_info[F("txPower")] = (int) WiFi.getTxPower();
@@ -88,10 +100,14 @@ void serializeInfo(JsonObject root)
   #endif
 
   root[F("freeheap")] = ESP.getFreeHeap();
-  #if defined(ARDUINO_ARCH_ESP32) && defined(WLED_USE_PSRAM)
+  #if defined(ARDUINO_ARCH_ESP32) && defined(BOARD_HAS_PSRAM)
   if (psramFound()) root[F("psram")] = ESP.getFreePsram();
   #endif
   root[F("uptime")] = millis()/1000 + rolloverMillis*4294967;
+
+  char time[32];
+  getTimeString(time);
+  root[F("time")] = time;
 
   usermods.addToJsonInfo(root);
 
@@ -153,6 +169,23 @@ void serializeNetworks(JsonObject root)
   }
 }
 
+void serializeNodes(JsonObject root)
+{
+  JsonArray nodes = root.createNestedArray("nodes");
+
+  for (NodesMap::iterator it = Nodes.begin(); it != Nodes.end(); ++it)
+  {
+    if (it->second.ip[0] != 0)
+    {
+      JsonObject node = nodes.createNestedObject();
+      node[F("name")] = it->second.nodeName;
+      node["type"]    = it->second.nodeType;
+      node["ip"]      = it->second.ip.toString();
+      node[F("age")]  = it->second.age;
+      node[F("vid")]  = it->second.build;
+    }
+  }
+}
 
 void serveJson(AsyncWebServerRequest* request)
 {
@@ -161,7 +194,8 @@ void serveJson(AsyncWebServerRequest* request)
   if      (url.indexOf("state") > 0) subJson = JSON_PATH_STATE;
   else if (url.indexOf("info")  > 0) subJson = JSON_PATH_INFO;
   else if (url.indexOf("si")    > 0) subJson = JSON_PATH_STATE_INFO;
-  else if (url.indexOf("net") > 0) subJson = JSON_PATH_NETWORKS;
+  else if (url.indexOf("nodes") > 0) subJson = JSON_PATH_NODES;
+  else if (url.indexOf("net")   > 0) subJson = JSON_PATH_NETWORKS;
   else if (url.indexOf("cfg") > 0 && handleFileRead(request, "/cfg.json")) {
     return;
   }
@@ -174,7 +208,7 @@ void serveJson(AsyncWebServerRequest* request)
     request->send(503, "application/json", F("{\"error\":3}"));
     return;
   }
-  AsyncJsonResponse *response = new AsyncJsonResponse(&doc, subJson==6);
+  AsyncJsonResponse *response = new AsyncJsonResponse(&doc, subJson==JSON_PATH_FXDATA || subJson==JSON_PATH_EFFECTS); // will clear and convert JsonDocument into JsonArray if necessary
 
   JsonVariant lDoc = response->getRoot();
 
@@ -184,6 +218,8 @@ void serveJson(AsyncWebServerRequest* request)
       serializeState(lDoc); break;
     case JSON_PATH_INFO:
       serializeInfo(lDoc); break;
+    case JSON_PATH_NODES:
+      serializeNodes(lDoc); break;
     case JSON_PATH_NETWORKS:
       serializeNetworks(lDoc); break;
     default: //all
@@ -200,7 +236,12 @@ void serveJson(AsyncWebServerRequest* request)
 
   DEBUG_PRINTF("JSON buffer size: %u for request: %d\n", lDoc.memoryUsage(), subJson);
 
+  #ifdef WLED_DEBUG
+  size_t len =
+  #endif
   response->setLength();
+  DEBUG_PRINT(F("JSON content length: ")); DEBUG_PRINTLN(len);
+
   request->send(response);
   releaseJSONBufferLock();
 }

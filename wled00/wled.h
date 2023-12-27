@@ -3,12 +3,12 @@
 /*
    Main sketch, global variable declarations
    @title WLED project sketch
-   @version 0.14.0-b1
+   @version 0.14.1-a1
    @author Christian Schwinne
  */
 
 // version code in format yymmddb (b = daily build)
-#define VERSION 2212222
+#define VERSION 2312180
 
 //uncomment this if you have a "my_config.h" file you'd like to use
 //#define WLED_USE_MY_CONFIG
@@ -27,7 +27,7 @@
 #define WLED_DISABLE_ALEXA       // saves 11kb/#define WLED_DISABLE_BLYNK       // saves 6kb
 #define WLED_DISABLE_HUESYNC     // saves 4kb
 #define WLED_DISABLE_INFRARED    // saves 12kb, there is no pin left for this on ESP8266-01
-#define WLED_DISABLE_MQTT
+//#define WLED_DISABLE_MQTT
 #define WLED_DISABLE_WEBSOCKETS
 #define WLED_DISABLE_LOXONE
 #define WLED_DISABLE_2D
@@ -46,6 +46,8 @@
 #ifndef WLED_DISABLE_WEBSOCKETS
   #define WLED_ENABLE_WEBSOCKETS
 #endif
+
+//#define WLED_DISABLE_ESPNOW      // Removes dependence on esp now 
 
 #define WLED_ENABLE_FS_EDITOR      // enable /edit page for editing FS content. Will also be disabled with OTA lock
 
@@ -80,6 +82,9 @@
   {
   #include <user_interface.h>
   }
+  #ifndef WLED_DISABLE_ESPNOW
+    #include <espnow.h>
+  #endif
 #else // ESP32
   #include <HardwareSerial.h>  // ensure we have the correct "Serial" on new MCUs (depends on ARDUINO_USB_MODE and ARDUINO_USB_CDC_ON_BOOT)
   #include <WiFi.h>
@@ -96,6 +101,10 @@
     #include <LittleFS.h>
   #endif
   #include "esp_task_wdt.h"
+
+  #ifndef WLED_DISABLE_ESPNOW
+    #include <esp_now.h>
+  #endif
 #endif
 #include <Wire.h>
 #include <SPI.h>
@@ -130,7 +139,9 @@
 #include "src/dependencies/toki/Toki.h"
 
 
-//#include "src/dependencies/async-mqtt-client/AsyncMqttClient.h"
+#ifdef WLED_ENABLE_MQTT
+#include "src/dependencies/async-mqtt-client/AsyncMqttClient.h"
+#endif
 
 #define ARDUINOJSON_DECODE_UNICODE 0
 #include "src/dependencies/json/AsyncJson-v6.h"
@@ -139,13 +150,17 @@
 // ESP32-WROVER features SPI RAM (aka PSRAM) which can be allocated using ps_malloc()
 // we can create custom PSRAMDynamicJsonDocument to use such feature (replacing DynamicJsonDocument)
 // The following is a construct to enable code to compile without it.
-// There is a code thet will still not use PSRAM though:
+// There is a code that will still not use PSRAM though:
 //    AsyncJsonResponse is a derived class that implements DynamicJsonDocument (AsyncJson-v6.h)
-#if defined(ARDUINO_ARCH_ESP32) && defined(WLED_USE_PSRAM)
+#if defined(ARDUINO_ARCH_ESP32) && defined(BOARD_HAS_PSRAM) && defined(WLED_USE_PSRAM)
 struct PSRAM_Allocator {
   void* allocate(size_t size) {
     if (psramFound()) return ps_malloc(size); // use PSRAM if it exists
     else              return malloc(size);    // fallback
+  }
+  void* reallocate(void* ptr, size_t new_size) {
+    if (psramFound()) return ps_realloc(ptr, new_size); // use PSRAM if it exists
+    else              return realloc(ptr, new_size);    // fallback
   }
   void deallocate(void* pointer) {
     free(pointer);
@@ -166,6 +181,10 @@ using PSRAMDynamicJsonDocument = BasicJsonDocument<PSRAM_Allocator>;
 
 #ifndef CLIENT_PASS
   #define CLIENT_PASS ""
+#endif
+
+#ifndef MDNS_NAME
+  #define MDNS_NAME DEFAULT_MDNS_NAME
 #endif
 
 #if defined(WLED_AP_PASS) && !defined(WLED_AP_SSID)
@@ -285,13 +304,7 @@ WLED_GLOBAL char ntpServerName[33] _INIT("0.wled.pool.ntp.org");   // NTP server
 // WiFi CONFIG (all these can be changed via web UI, no need to set them here)
 WLED_GLOBAL char clientSSID[33] _INIT(CLIENT_SSID);
 WLED_GLOBAL char clientPass[65] _INIT(CLIENT_PASS);
-
-#ifndef SERVER_MDNS
-WLED_GLOBAL char cmDNS[33] _INIT("x");                             // mDNS address (placeholder, is replaced by wledXXXXXX.local)
-#else
-WLED_GLOBAL char cmDNS[33] _INIT(SERVER_MDNS);                             // mDNS address (placeholder, is replaced by wledXXXXXX.local)
-#endif
-
+WLED_GLOBAL char cmDNS[33] _INIT(MDNS_NAME);                       // mDNS address (*.local, replaced by wledXXXXXX if default is used)
 WLED_GLOBAL char apSSID[33] _INIT("");                             // AP off by default (unless setup)
 WLED_GLOBAL byte apChannel _INIT(1);                               // 2.4GHz WiFi AP channel (1-13)
 WLED_GLOBAL byte apHide    _INIT(0);                               // hidden AP SSID
@@ -335,17 +348,39 @@ WLED_GLOBAL byte irEnabled      _INIT(IRTYPE); // Infrared receiver
 WLED_GLOBAL byte irEnabled      _INIT(0);     // Infrared receiver disabled
 #endif
 
+// mqtt
+WLED_GLOBAL unsigned long lastMqttReconnectAttempt _INIT(0);  // used for other periodic tasks too
+#ifndef WLED_DISABLE_MQTT
+  #ifndef MQTT_MAX_TOPIC_LEN
+    #define MQTT_MAX_TOPIC_LEN 32
+  #endif
+  #ifndef MQTT_MAX_SERVER_LEN
+    #define MQTT_MAX_SERVER_LEN 32
+  #endif
+WLED_GLOBAL AsyncMqttClient *mqtt _INIT(NULL);
 WLED_GLOBAL bool mqttEnabled _INIT(false);
-WLED_GLOBAL char mqttDeviceTopic[33] _INIT("");            // main MQTT topic (individual per device, default is wled/mac)
-WLED_GLOBAL char mqttGroupTopic[33] _INIT("wled/all");     // second MQTT topic (for example to group devices)
-WLED_GLOBAL char mqttServer[33] _INIT("");                 // both domains and IPs should work (no SSL)
+WLED_GLOBAL char mqttStatusTopic[40] _INIT("");            // this must be global because of async handlers
+WLED_GLOBAL char mqttDeviceTopic[MQTT_MAX_TOPIC_LEN+1] _INIT("");         // main MQTT topic (individual per device, default is wled/mac)
+WLED_GLOBAL char mqttGroupTopic[MQTT_MAX_TOPIC_LEN+1]  _INIT("wled/all"); // second MQTT topic (for example to group devices)
+WLED_GLOBAL char mqttServer[MQTT_MAX_SERVER_LEN+1]     _INIT("");         // both domains and IPs should work (no SSL)
 WLED_GLOBAL char mqttUser[41] _INIT("");                   // optional: username for MQTT auth
 WLED_GLOBAL char mqttPass[65] _INIT("");                   // optional: password for MQTT auth
 WLED_GLOBAL char mqttClientID[41] _INIT("");               // override the client ID
 WLED_GLOBAL uint16_t mqttPort _INIT(1883);
+WLED_GLOBAL bool retainMqttMsg _INIT(false);               // retain brightness and color
+#define WLED_MQTT_CONNECTED (mqtt != nullptr && mqtt->connected())
+#else
+#define WLED_MQTT_CONNECTED false
+#endif
 
 
 WLED_GLOBAL uint16_t serialBaud _INIT(1152); // serial baud rate, multiply by 100
+
+#ifndef WLED_DISABLE_ESPNOW
+WLED_GLOBAL bool enable_espnow_remote _INIT(false);
+WLED_GLOBAL char linked_remote[13]   _INIT("");
+WLED_GLOBAL char last_signal_src[13]   _INIT("");
+#endif
 
 // Time CONFIG
 WLED_GLOBAL bool ntpEnabled _INIT(false);    // get internet time. Only required if you use clock overlays or time-activated macros
@@ -371,7 +406,7 @@ WLED_GLOBAL uint16_t userVar0 _INIT(0), userVar1 _INIT(0); //available for use i
 // wifi
 WLED_GLOBAL bool apActive _INIT(false);
 WLED_GLOBAL bool forceReconnect _INIT(false);
-WLED_GLOBAL uint32_t lastReconnectAttempt _INIT(0);
+WLED_GLOBAL unsigned long lastReconnectAttempt _INIT(0);
 WLED_GLOBAL bool interfacesInited _INIT(false);
 WLED_GLOBAL bool wasConnected _INIT(false);
 
@@ -406,10 +441,11 @@ WLED_GLOBAL String escapedMac;
 WLED_GLOBAL DNSServer dnsServer;
 
 // network time
+#define NTP_NEVER 999000000L
 WLED_GLOBAL bool ntpConnected _INIT(false);
 WLED_GLOBAL time_t localTime _INIT(0);
-WLED_GLOBAL unsigned long ntpLastSyncTime _INIT(999000000L);
-WLED_GLOBAL unsigned long ntpPacketSentTime _INIT(999000000L);
+WLED_GLOBAL unsigned long ntpLastSyncTime _INIT(NTP_NEVER);
+WLED_GLOBAL unsigned long ntpPacketSentTime _INIT(NTP_NEVER);
 WLED_GLOBAL IPAddress ntpServerIP;
 WLED_GLOBAL uint16_t ntpLocalPort _INIT(2390);
 WLED_GLOBAL uint16_t rolloverMillis _INIT(0);
@@ -461,7 +497,7 @@ WLED_GLOBAL AsyncWebServer server _INIT_N(((80)));
 WLED_GLOBAL AsyncWebSocket ws _INIT_N((("/ws")));
 #endif
 WLED_GLOBAL AsyncClient* hueClient _INIT(NULL);
-//WLED_GLOBAL AsyncMqttClient* mqtt _INIT(NULL);
+WLED_GLOBAL AsyncMqttClient* mqtt _INIT(NULL);
 WLED_GLOBAL AsyncWebHandler *editHandler _INIT(nullptr);
 
 // udp interface objects
@@ -509,16 +545,16 @@ WLED_GLOBAL volatile uint8_t jsonBufferLock _INIT(0);
 
 // enable additional debug output
 #if defined(WLED_DEBUG_HOST)
+  #include "net_debug.h"
   // On the host side, use netcat to receive the log statements: nc -l 7868 -u
   // use -D WLED_DEBUG_HOST='"192.168.xxx.xxx"' or FQDN within quotes
   #define DEBUGOUT NetDebug
   WLED_GLOBAL bool netDebugEnabled _INIT(true);
   WLED_GLOBAL char netDebugPrintHost[33] _INIT(WLED_DEBUG_HOST);
-  #if defined(WLED_DEBUG_NET_PORT)
-  WLED_GLOBAL int netDebugPrintPort _INIT(WLED_DEBUG_PORT);
-  #else
-  WLED_GLOBAL int netDebugPrintPort _INIT(7868);
+  #ifndef WLED_DEBUG_PORT
+    #define WLED_DEBUG_PORT 7868
   #endif
+  WLED_GLOBAL int netDebugPrintPort _INIT(WLED_DEBUG_PORT);
 #else
   #define DEBUGOUT Serial
 #endif
@@ -560,7 +596,6 @@ WLED_GLOBAL volatile uint8_t jsonBufferLock _INIT(0);
   #define WLED_CONNECTED (WiFi.status() == WL_CONNECTED)
 #endif
 #define WLED_WIFI_CONFIGURED (strlen(clientSSID) >= 1 && strcmp(clientSSID, DEFAULT_CLIENT_SSID) != 0)
-#define WLED_MQTT_CONNECTED (mqtt != nullptr && mqtt->connected())
 
 #ifndef WLED_AP_SSID_UNIQUE
   #define WLED_SET_AP_SSID() do { \

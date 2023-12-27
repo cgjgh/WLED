@@ -219,7 +219,6 @@ function writeChunks(srcDir, specs, resultFile) {
 }
 
 writeHtmlGzipped("wled00/data/index.htm", "wled00/html_ui.h", 'index');
-
 writeChunks(
   "wled00/data",
   [

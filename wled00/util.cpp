@@ -148,8 +148,14 @@ bool oappendi(int i)
 bool oappend(const char* txt)
 {
   uint16_t len = strlen(txt);
-  if (olen + len >= SETTINGS_STACK_BUF_SIZE)
+  if ((obuf == nullptr) || (olen + len >= SETTINGS_STACK_BUF_SIZE)) { // sanity checks
+#ifdef WLED_DEBUG
+    DEBUG_PRINT(F("oappend() buffer overflow. Cannot append "));
+    DEBUG_PRINT(len); DEBUG_PRINT(F(" bytes \t\""));
+    DEBUG_PRINT(txt); DEBUG_PRINTLN(F("\""));
+#endif
     return false;        // buffer full
+  }
   strcpy(obuf + olen, txt);
   olen += len;
   return true;
@@ -299,4 +305,27 @@ unsigned char h2int(char c)
         return((unsigned char)c - 'A' + 10);
     }
     return(0);
+}
+
+
+void checkSettingsPIN(const char* pin) {
+  if (!pin) return;
+  if (!correctPIN && millis() - lastEditTime < PIN_RETRY_COOLDOWN) return; // guard against PIN brute force
+  bool correctBefore = correctPIN;
+  correctPIN = (strlen(settingsPIN) == 0 || strncmp(settingsPIN, pin, 4) == 0);
+  if (correctBefore != correctPIN) createEditHandler(correctPIN);
+  lastEditTime = millis();
+}
+
+
+uint16_t crc16(const unsigned char* data_p, size_t length) {
+  uint8_t x;
+  uint16_t crc = 0xFFFF;
+  if (!length) return 0x1D0F;
+  while (length--) {
+    x = crc >> 8 ^ *data_p++;
+    x ^= x>>4;
+    crc = (crc << 8) ^ ((uint16_t)(x << 12)) ^ ((uint16_t)(x <<5)) ^ ((uint16_t)x);
+  }
+  return crc;
 }
