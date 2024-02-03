@@ -278,6 +278,10 @@ float fmod_t(float num, float denom);
 #define floor_t floor
 #endif
 
+//wled_serial.cpp
+void handleSerial();
+void updateBaudRate(uint32_t rate);
+
 // wled_server.cpp
 bool isIp(String str);
 void createEditHandler(bool enable);

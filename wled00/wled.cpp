@@ -3,7 +3,6 @@
 #include "wled_ethernet.h"
 #include <Arduino.h>
 
-
 #if defined(ARDUINO_ARCH_ESP32) && defined(WLED_DISABLE_BROWNOUT_DET)
 #include "soc/soc.h"
 #include "soc/rtc_cntl_reg.h"
@@ -55,6 +54,8 @@ void WLED::loop()
   handleConnection();
   #ifndef WLED_DISABLE_ESPNOW
   handleRemote();
+  handleSerial();
+  handleImprovWifiScan();
   #endif
   userLoop();
 
@@ -82,28 +83,20 @@ void WLED::loop()
     yield();
   }
 
+  #ifdef WLED_DEBUG
+  stripMillis = millis();
+  #endif
     if (apActive) dnsServer.processNextRequest();
     #ifndef WLED_DISABLE_OTA
     if (WLED_CONNECTED && aOtaEnabled && !otaLock && correctPIN) ArduinoOTA.handle();
     #endif
     yield();
 
-
-    // #ifdef WLED_DEBUG
-    // unsigned long stripMillis = millis();
-    // #endif
-
-    #ifdef ESP8266
-    #else if (!noWifiSleep)
-      delay(1); //required to make sure ESP enters modem sleep (see #1184)
-    #endif
     #ifdef WLED_DEBUG
-    stripMillis = millis() - stripMillis;
-    if (stripMillis > 50) DEBUG_PRINTLN("Slow strip.");
+     stripMillis = millis() - stripMillis;
     avgStripMillis += stripMillis;
     if (stripMillis > maxStripMillis) maxStripMillis = stripMillis;
     #endif
-
 
   yield();
 #ifdef ESP8266
@@ -115,18 +108,19 @@ void WLED::loop()
     rolloverMillis++;
     lastMqttReconnectAttempt = 0;
     ntpLastSyncTime = NTP_NEVER;  // force new NTP query
+
   }
-  // if (millis() - lastMqttReconnectAttempt > 30000 || lastMqttReconnectAttempt == 0) { // lastMqttReconnectAttempt==0 forces immediate broadcast
-  //   lastMqttReconnectAttempt = millis();
-  //   #ifndef WLED_DISABLE_MQTT
-  //   initMqtt();
-  //   #endif
-  //   yield();
-  //   // refresh WLED nodes list
-  //   //refreshNodeList();
-  //  // if (nodeBroadcastEnabled) sendSysInfoUDP();
-  //   yield();
-  // }
+  if (millis() - lastMqttReconnectAttempt > 30000 || lastMqttReconnectAttempt == 0) { // lastMqttReconnectAttempt==0 forces immediate broadcast
+    lastMqttReconnectAttempt = millis();
+    #ifndef WLED_DISABLE_MQTT
+    initMqtt();
+    #endif
+    yield();
+    // refresh WLED nodes list
+    //refreshNodeList();
+    // if (nodeBroadcastEnabled) sendSysInfoUDP();
+    //yield();
+  }
 
   // 15min PIN time-out
   if (strlen(settingsPIN)>0 && correctPIN && millis() - lastEditTime > PIN_TIMEOUT) {
@@ -136,6 +130,7 @@ void WLED::loop()
 
   //LED settings have been saved, re-init busses
   //This code block causes severe FPS drop on ESP32 with the original "if (busConfigs[0] != nullptr)" conditional. Investigate!
+  if (doSerializeConfig) serializeConfig();
 
   yield();
   //handleWs();
@@ -382,6 +377,7 @@ pinManager.allocateMultiplePins(pins, sizeof(pins)/sizeof(managed_pin_type), Pin
   }
 #endif
 
+  DEBUG_PRINT(F("heap ")); DEBUG_PRINTLN(ESP.getFreeHeap());
 
   DEBUG_PRINTLN(F("Usermods setup"));
   userSetup();

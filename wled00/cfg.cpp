@@ -427,8 +427,8 @@ void serializeConfig() {
   hw_if_spi.add(spi_sclk);
   hw_if_spi.add(spi_miso);
 
-  JsonObject hw_status = hw.createNestedObject("status");
-  hw_status["pin"] = -1;
+  // JsonObject hw_status = hw.createNestedObject("status");
+  // hw_status["pin"] = -1;
 
   
 
