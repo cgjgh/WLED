@@ -352,36 +352,6 @@ writeChunks(
       file: "iro.js",
       name: "iroJs",
       method: "gzip"
-    },
-    {
-      file: "reactprod.js",
-      name: "reactprod",
-      method: "gzip"
-    },
-    {
-      file: "reactdom.js",
-      name: "reactdom",
-      method: "gzip"
-    },
-    {
-      file: "styledcom.js",
-      name: "styledcom",
-      method: "gzip"
-    },
-    {
-      file: "styledcommap.js",
-      name: "styledcommap",
-      method: "gzip"
-    },
-    {
-      file: "styletags.js",
-      name: "styletags",
-      method: "gzip"
-    },
-    {
-      file: "rangetouch.js",
-      name: "rangetouchJs",
-      method: "gzip"
     }
     
   ],
