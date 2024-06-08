@@ -123,9 +123,12 @@ void handleAnalog(uint8_t b)
 
 void handleButton()
 {
-  static unsigned long lastRead = 0UL;
+  static unsigned long lastAnalogRead = 0UL;
   static unsigned long lastRun = 0UL;
   unsigned long now = millis();
+
+  if ((now - lastRun < ANALOG_BTN_READ_CYCLE+1)) return;
+  lastRun = now;
 
   for (uint8_t b=0; b<WLED_MAX_BUTTONS; b++) {
     #ifdef ESP8266
@@ -137,9 +140,8 @@ void handleButton()
     if (usermods.handleButton(b)) continue; // did usermod handle buttons
 
     if (buttonType[b] == BTN_TYPE_ANALOG || buttonType[b] == BTN_TYPE_ANALOG_INVERTED) { // button is not a button but a potentiometer
-      if (now - lastRead > ANALOG_BTN_READ_CYCLE) {
+      if (now - lastAnalogRead > ANALOG_BTN_READ_CYCLE) {
         handleAnalog(b);
-        lastRead = now;
       }
       continue;
     }
@@ -218,6 +220,9 @@ void handleButton()
       buttonWaitTime[b] = 0;
       shortPressAction(b);
     }
+  }
+  if (now - lastAnalogRead > ANALOG_BTN_READ_CYCLE) {
+    lastAnalogRead = now;
   }
 }
 

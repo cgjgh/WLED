@@ -76,13 +76,13 @@ void createEditHandler(bool enable) {
       editHandler = &server.addHandler(new SPIFFSEditor("","",WLED_FS));//http_username,http_password));
       #endif
     #else
-      editHandler = &server.on("/edit", HTTP_GET, [](AsyncWebServerRequest *request){
+      editHandler = &server.on(SET_F("/edit"), HTTP_GET, [](AsyncWebServerRequest *request){
         serveMessage(request, 501, "Not implemented", F("The FS editor is disabled in this build."), 254);
       });
     #endif
   } else {
-    editHandler = &server.on("/edit", HTTP_ANY, [](AsyncWebServerRequest *request){
-      serveMessage(request, 401, "Access Denied", FPSTR(s_unlock_cfg), 254);
+    editHandler = &server.on(SET_F("/edit"), HTTP_ANY, [](AsyncWebServerRequest *request){
+      serveMessage(request, 401, F("Access Denied"), FPSTR(s_unlock_cfg), 254);
     });
   }
 }
@@ -91,11 +91,11 @@ bool captivePortal(AsyncWebServerRequest *request)
 {
   if (ON_STA_FILTER(request)) return false; //only serve captive in AP mode
   String hostH;
-  if (!request->hasHeader("Host")) return false;
-  hostH = request->getHeader("Host")->value();
+  if (!request->hasHeader(F("Host"))) return false;
+  hostH = request->getHeader(F("Host"))->value();
 
-  if (!isIp(hostH) && hostH.indexOf("wled.me") < 0 && hostH.indexOf(cmDNS) < 0) {
-    DEBUG_PRINTLN("Captive portal");
+  if (!isIp(hostH) && hostH.indexOf(F("wled.me")) < 0 && hostH.indexOf(cmDNS) < 0) {
+    DEBUG_PRINTLN(F("Captive portal"));
     AsyncWebServerResponse *response = request->beginResponse(302);
     response->addHeader(F("Location"), F("http://4.3.2.1"));
     request->send(response);
@@ -112,7 +112,7 @@ void initServer()
   DefaultHeaders::Instance().addHeader(F("Access-Control-Allow-Headers"), "*");
   
   //settings page
-  server.on("/settings", HTTP_GET, [](AsyncWebServerRequest *request){
+  server.on(SET_F("/settings"), HTTP_GET, [](AsyncWebServerRequest *request){
     if(!request->authenticate(WLED_HTTP_USER, WLED_HTTP_PASS))
       return request->requestAuthentication(); 
     serveSettings(request);
@@ -120,7 +120,7 @@ void initServer()
 
   // "/settings/settings.js&p=x" request also handled by serveSettings()
 
-  server.on("/style.css", HTTP_GET, [](AsyncWebServerRequest *request){
+  server.on(SET_F("/style.css"), HTTP_GET, [](AsyncWebServerRequest *request){
     if (handleIfNoneMatchCacheHeader(request)) return;
     AsyncWebServerResponse *response = request->beginResponse_P(200, "text/css", PAGE_settingsCss, PAGE_settingsCss_length);
     response->addHeader(FPSTR(s_content_enc),"gzip");
@@ -128,33 +128,33 @@ void initServer()
     request->send(response);
   });
 
-  server.on("/favicon.ico", HTTP_GET, [](AsyncWebServerRequest *request){
+  server.on(SET_F("/favicon.ico"), HTTP_GET, [](AsyncWebServerRequest *request){
     if(!handleFileRead(request, "/favicon.ico"))
     {
       request->send_P(200, "image/x-icon", favicon, 156);
     }
   });
-  
-  server.on("/welcome", HTTP_GET, [](AsyncWebServerRequest *request){
+
+  server.on(SET_F("/welcome"), HTTP_GET, [](AsyncWebServerRequest *request){
     serveSettings(request);
   });
 
-  server.on("/reset", HTTP_GET, [](AsyncWebServerRequest *request){
+  server.on(SET_F("/reset"), HTTP_GET, [](AsyncWebServerRequest *request){
     serveMessage(request, 200,F("Rebooting now..."),F("Please wait ~10 seconds..."),129);
     doReboot = true;
   });
 
-  server.on("/settings", HTTP_POST, [](AsyncWebServerRequest *request){
+  server.on(SET_F("/settings"), HTTP_POST, [](AsyncWebServerRequest *request){
     if(!request->authenticate(WLED_HTTP_USER, WLED_HTTP_PASS))
       return request->requestAuthentication(); 
     serveSettings(request, true);
   });
 
-  server.on("/json", HTTP_GET, [](AsyncWebServerRequest *request){
+  server.on(SET_F("/json"), HTTP_GET, [](AsyncWebServerRequest *request){
     serveJson(request);
   });
 
-  AsyncCallbackJsonWebHandler* handler = new AsyncCallbackJsonWebHandler("/json", [](AsyncWebServerRequest *request) {
+  AsyncCallbackJsonWebHandler* handler = new AsyncCallbackJsonWebHandler(F("/json"), [](AsyncWebServerRequest *request) {
     bool verboseResponse = false;
     bool isConfig = false;
 
@@ -203,15 +203,15 @@ void initServer()
   }, JSON_BUFFER_SIZE);
   server.addHandler(handler);
 
-  server.on("/version", HTTP_GET, [](AsyncWebServerRequest *request){
+  server.on(SET_F("/version"), HTTP_GET, [](AsyncWebServerRequest *request){
     request->send(200, "text/plain", (String)VERSION);
   });
 
-  server.on("/uptime", HTTP_GET, [](AsyncWebServerRequest *request){
+  server.on(SET_F("/uptime"), HTTP_GET, [](AsyncWebServerRequest *request){
     request->send(200, "text/plain", (String)millis());
   });
 
-  server.on("/freeheap", HTTP_GET, [](AsyncWebServerRequest *request){
+  server.on(SET_F("/freeheap"), HTTP_GET, [](AsyncWebServerRequest *request){
     request->send(200, "text/plain", (String)ESP.getFreeHeap());
   });
 
@@ -223,20 +223,20 @@ void initServer()
     setStaticContentCacheHeaders(response);
     request->send(response);
   });
- #endif
-  server.on("/upload", HTTP_POST, [](AsyncWebServerRequest *request) {},
+#endif
+ server.on(SET_F("/upload"), HTTP_POST, [](AsyncWebServerRequest *request) {},
         [](AsyncWebServerRequest *request, const String& filename, size_t index, uint8_t *data,
                       size_t len, bool final) {handleUpload(request, filename, index, data, len, final);}
   );
 
-  server.on("/iro.js", HTTP_GET, [](AsyncWebServerRequest *request){
+  server.on(SET_F("/iro.js"), HTTP_GET, [](AsyncWebServerRequest *request){
     AsyncWebServerResponse *response = request->beginResponse_P(200, "application/javascript", iroJs, iroJs_length);
     response->addHeader(FPSTR(s_content_enc),"gzip");
     setStaticContentCacheHeaders(response);
     request->send(response);
   });
 
-  server.on("/rangetouch.js", HTTP_GET, [](AsyncWebServerRequest *request){
+  server.on(SET_F("/rangetouch.js"), HTTP_GET, [](AsyncWebServerRequest *request){
     AsyncWebServerResponse *response = request->beginResponse_P(200, "application/javascript", rangetouchJs, rangetouchJs_length);
     response->addHeader(FPSTR(s_content_enc),"gzip");
     setStaticContentCacheHeaders(response);
@@ -247,20 +247,20 @@ void initServer()
 
 #ifndef WLED_DISABLE_OTA
   //init ota page
-  server.on("/update", HTTP_GET, [](AsyncWebServerRequest *request){
+  server.on(SET_F("/update"), HTTP_GET, [](AsyncWebServerRequest *request){
     if (otaLock) {
-      serveMessage(request, 401, "Access Denied", FPSTR(s_unlock_ota), 254);
+      serveMessage(request, 401, F("Access Denied"), FPSTR(s_unlock_ota), 254);
     } else
       serveSettings(request); // checks for "upd" in URL and handles PIN
   });
 
-  server.on("/update", HTTP_POST, [](AsyncWebServerRequest *request){
+  server.on(SET_F("/update"), HTTP_POST, [](AsyncWebServerRequest *request){
     if (!correctPIN) {
       serveSettings(request, true); // handle PIN page POST request
       return;
     }
     if (otaLock) {
-      serveMessage(request, 401, "Access Denied", FPSTR(s_unlock_ota), 254);
+      serveMessage(request, 401, F("Access Denied"), FPSTR(s_unlock_ota), 254);
       return;
     }
     if (Update.hasError()) {
@@ -293,8 +293,8 @@ void initServer()
     }
   });
 #else
-  server.on("/update", HTTP_GET, [](AsyncWebServerRequest *request){
-    serveMessage(request, 501, "Not implemented", F("OTA updating is disabled in this build."), 254);
+  server.on(SET_F("/update"), HTTP_GET, [](AsyncWebServerRequest *request){
+    serveMessage(request, 501, F("Not implemented"), F("OTA updating is disabled in this build."), 254);
   });
 #endif
 
@@ -479,7 +479,7 @@ void serveSettings(AsyncWebServerRequest* request, bool post)
   // if OTA locked or too frequent PIN entry requests fail hard
   if ((subPage == SUBPAGE_WIFI && wifiLock && otaLock) || (post && !correctPIN && millis()-lastEditTime < PIN_RETRY_COOLDOWN))
   {
-    serveMessage(request, 401, "Access Denied", FPSTR(s_unlock_ota), 254); return;
+    serveMessage(request, 401, F("Access Denied"), FPSTR(s_unlock_ota), 254); return;
   }
 
   if (post) { //settings/set POST request, saving

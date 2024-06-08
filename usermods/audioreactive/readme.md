@@ -38,7 +38,7 @@ Alternatively, you can use the latest arduinoFFT development version.
 ArduinoFFT `develop` library is slightly more accurate, and slightly faster than our customised library, however also needs additional 2kB RAM.
 
 * `build_flags` = `-D USERMOD_AUDIOREACTIVE` `-D UM_AUDIOREACTIVE_USE_NEW_FFT`
-* `lib_deps`= `https://github.com/kosme/arduinoFFT#develop @ 1.9.2`
+* `lib_deps`= `https://github.com/kosme/arduinoFFT#419d7b0`
 
 ## Configuration
 
@@ -54,6 +54,11 @@ If you want to define default GPIOs during compile time, use the following (defa
 - `-D MCLK_PIN=x`  : GPIO for master clock pin on digital Line-In boards (-1)
 - `-D ES7243_SDAPIN` : GPIO for I2C SDA pin on ES7243 microphone (-1)
 - `-D ES7243_SCLPIN` : GPIO for I2C SCL pin on ES7243 microphone (-1)
+
+Other options:
+
+- `-D UM_AUDIOREACTIVE_ENABLE` : makes usermod default enabled (not the same as include into build option!)
+- `-D UM_AUDIOREACTIVE_DYNAMICS_LIMITER_OFF` : disables rise/fall limiter default
 
 **NOTE** I2S is used for analog audio sampling. Hence, the analog *buttons* (i.e. potentiometers) are disabled when running this usermod with an analog microphone.
 
