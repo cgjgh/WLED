@@ -4,43 +4,27 @@
 #define ESP_NOW_STATE_ON           1
 #define ESP_NOW_STATE_ERROR        2
 
-#define NIGHT_MODE_DEACTIVATED     -1
-#define NIGHT_MODE_BRIGHTNESS      5
-
-#define WIZMOTE_BUTTON_ON          1
-#define WIZMOTE_BUTTON_OFF         2
-#define WIZMOTE_BUTTON_NIGHT       3
-#define WIZMOTE_BUTTON_ONE         16
-#define WIZMOTE_BUTTON_TWO         17
-#define WIZMOTE_BUTTON_THREE       18
-#define WIZMOTE_BUTTON_FOUR        19
-#define WIZMOTE_BUTTON_BRIGHT_UP   9
-#define WIZMOTE_BUTTON_BRIGHT_DOWN 8
 
 #ifdef WLED_DISABLE_ESPNOW
 void handleRemote(){}
 #else
 
-// This is kind of an esoteric strucure because it's pulled from the "Wizmote"
-// product spec. That remote is used as the baseline for behavior and availability
-// since it's broadly commercially available and works out of the box as a drop-in
-typedef struct message_structure {
-  uint8_t program;      // 0x91 for ON button, 0x81 for all others
-  uint8_t seq[4];       // Incremental sequence number 32 bit unsigned integer LSB first
-  uint8_t byte5 = 32;   // Unknown
-  uint8_t button;       // Identifies which button is being pressed
-  uint8_t byte8 = 1;    // Unknown, but always 0x01
-  uint8_t byte9 = 100;  // Unknown, but always 0x64
+// stall change monitor struct
 
-  uint8_t byte10;  // Unknown, maybe checksum
-  uint8_t byte11;  // Unknown, maybe checksum
-  uint8_t byte12;  // Unknown, maybe checksum
-  uint8_t byte13;  // Unknown, maybe checksum
-} message_structure;
+typedef struct msg_struct_stall_mon {
+  bool toggleMode;
+  bool stallChange;
+} msg_struct_stall_mon;
+
+// speed/stall ID monitor struct
+typedef struct msg_struct_speed_stall_mon {
+  float speed;
+  int stallID;
+} msg_struct_speed_stall_mon;
 
 static int esp_now_state = ESP_NOW_STATE_UNINIT;
-static uint32_t last_seq = UINT32_MAX;
-static message_structure incoming;
+static msg_struct_stall_mon stall_mon_msg;
+static msg_struct_speed_stall_mon speed_stall_mon_msg;
 
  
 // Callback function that will be executed when data is received
@@ -56,44 +40,44 @@ void OnDataRecv(const uint8_t * mac, const uint8_t *incomingData, int len) {
   if (strcmp(last_signal_src, linked_remote) != 0) {
     DEBUG_PRINT(F("ESP Now Message Received from Unlinked Sender: "));
     DEBUG_PRINTLN(last_signal_src);
-    return;
+    //return;
   }
 
-  if (len != sizeof(incoming)) {
+  if (len == sizeof(stall_mon_msg))  {
+   // handle stall change
+  }
+
+  else if (len == sizeof(speed_stall_mon_msg))  {
+    // handle speed or stall
+  }
+
+  else  {
     DEBUG_PRINT(F("Unknown incoming ESP Now message received of length "));
     DEBUG_PRINTLN(len);
     return;
   }
 
-  memcpy(&(incoming.program), incomingData, sizeof(incoming));
-  uint32_t cur_seq = incoming.seq[0] | (incoming.seq[1] << 8) | (incoming.seq[2] << 16) | (incoming.seq[3] << 24);
+  // memcpy(&(incoming.program), incomingData, sizeof(incoming));
+  // uint32_t cur_seq = incoming.seq[0] | (incoming.seq[1] << 8) | (incoming.seq[2] << 16) | (incoming.seq[3] << 24);
 
-  if (cur_seq == last_seq) {
-    return;
-  }
+  // if (cur_seq == last_seq) {
+  //   return;
+  // }
 
-
+  
   DEBUG_PRINT(F("Incoming ESP Now Packet["));
-  DEBUG_PRINT(cur_seq);
+  //DEBUG_PRINT(cur_seq);
   DEBUG_PRINT(F("] from sender["));
   DEBUG_PRINT(last_signal_src);
   DEBUG_PRINT(F("] button: "));
-  DEBUG_PRINTLN(incoming.button);
-  // switch (incoming.button) {
-  //   case WIZMOTE_BUTTON_ON             : setOn();                                         stateUpdated(CALL_MODE_BUTTON); break;
-  //   case WIZMOTE_BUTTON_OFF            : setOff();                                        stateUpdated(CALL_MODE_BUTTON); break;
-  //   case WIZMOTE_BUTTON_ONE            : presetWithFallback(1, FX_MODE_STATIC,        0); resetNightMode(); break;
-  //   case WIZMOTE_BUTTON_TWO            : presetWithFallback(2, FX_MODE_BREATH,        0); resetNightMode(); break;
-  //   case WIZMOTE_BUTTON_THREE          : presetWithFallback(3, FX_MODE_FIRE_FLICKER,  0); resetNightMode(); break;
-  //   case WIZMOTE_BUTTON_FOUR           : presetWithFallback(4, FX_MODE_RAINBOW,       0); resetNightMode(); break;
-  //   case WIZMOTE_BUTTON_NIGHT          : activateNightMode();                             stateUpdated(CALL_MODE_BUTTON); break;
-  //   case WIZMOTE_BUTTON_BRIGHT_UP      : brightnessUp();                                  stateUpdated(CALL_MODE_BUTTON); break;
-  //   case WIZMOTE_BUTTON_BRIGHT_DOWN    : brightnessDown();                                stateUpdated(CALL_MODE_BUTTON); break;
-  //   default: break;
+  //DEBUG_PRINTLN(incoming.button);
 
-  // }
+}
 
-  last_seq = cur_seq;
+// callback when data is sent
+void OnDataSent(const uint8_t *mac_addr, esp_now_send_status_t status) {
+  Serial.print("\r\nLast Packet Send Status:\t");
+  Serial.println(status == ESP_NOW_SEND_SUCCESS ? "Delivery Success" : "Delivery Fail");
 }
 
 void handleRemote() {
@@ -109,7 +93,11 @@ void handleRemote() {
       #ifdef ESP8266
       esp_now_set_self_role(ESP_NOW_ROLE_SLAVE);
       #endif
-      
+
+      // Once ESPNow is successfully Init, we will register for Send CB to
+      // get the status of Trasnmitted packet
+      esp_now_register_send_cb(OnDataSent);
+
       esp_now_register_recv_cb(OnDataRecv);
       esp_now_state = ESP_NOW_STATE_ON;
     }

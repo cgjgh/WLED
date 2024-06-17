@@ -1,5 +1,5 @@
-#define CLIENT_SSID "DAIRY2 8874"
-#define CLIENT_PASS "987654321"
+#define CLIENT_SSID "Cedar Grove WIFI IOT"
+#define CLIENT_PASS "rfvg=65%$"
 
 #define SERVERNAME "Parlor"
 
