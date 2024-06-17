@@ -250,8 +250,8 @@ writeChunks(
       filter: "html-minify",
     },
     {
-      file: "settings_sync.htm",
-      name: "PAGE_settings_sync",
+      file: "settings_mqtt.htm",
+      name: "PAGE_settings_mqtt",
       method: "gzip",
       filter: "html-minify",
     },

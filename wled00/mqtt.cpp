@@ -49,22 +49,20 @@ void onMqttConnect(bool sessionPresent)
   if (mqttDeviceTopic[0] != 0) {
     strlcpy(subuf, mqttDeviceTopic, 33);
     mqtt->subscribe(subuf, 0);
-    strcat_P(subuf, PSTR("/test"));
+    strcat_P(subuf, PSTR("/json"));
     mqtt->subscribe(subuf, 0);
-    // strlcpy(subuf, mqttDeviceTopic, 33);
-    // strcat_P(subuf, PSTR("/api"));
-    // mqtt->subscribe(subuf, 0);
+    strlcpy(subuf, mqttDeviceTopic, 33);
+    strcat_P(subuf, PSTR("/api"));
+    mqtt->subscribe(subuf, 0);
   }
 
-  // if (mqttGroupTopic[0] != 0) {
-  //   strlcpy(subuf, mqttGroupTopic, 33);
-  //   mqtt->subscribe(subuf, 0);
-  //   strcat_P(subuf, PSTR("/col"));
-  //   mqtt->subscribe(subuf, 0);
-  //   strlcpy(subuf, mqttGroupTopic, 33);
-  //   strcat_P(subuf, PSTR("/api"));
-  //   mqtt->subscribe(subuf, 0);
-  // }
+  if (mqttGroupTopic[0] != 0) {
+    strlcpy(subuf, mqttGroupTopic, 33);
+    mqtt->subscribe(subuf, 0);
+    strlcpy(subuf, mqttGroupTopic, 33);
+    strcat_P(subuf, PSTR("/api"));
+    mqtt->subscribe(subuf, 0);
+  }
 
   usermods.onMqttConnect(sessionPresent);
 
@@ -79,11 +77,11 @@ void onMqttMessage(char* topic, char* payload, AsyncMqttClientMessageProperties 
   DEBUG_PRINT(F("MQTT msg: "));
   DEBUG_PRINTLN(topic);
 
-  // paranoia check to avoid npe if no payload
-  if (payload==nullptr) {
-    DEBUG_PRINTLN(F("no payload -> leave"));
-    return;
-  }
+  // // paranoia check to avoid npe if no payload
+  // if (payload==nullptr) {
+  //   DEBUG_PRINTLN(F("no payload -> leave"));
+  //   return;
+  // }
 
   if (index == 0) {                       // start (1st partial packet or the only packet)
     if (payloadStr) delete[] payloadStr;  // fail-safe: release buffer
@@ -103,45 +101,113 @@ void onMqttMessage(char* topic, char* payload, AsyncMqttClientMessageProperties 
   DEBUG_PRINTLN(payloadStr);
 
   size_t topicPrefixLen = strlen(mqttDeviceTopic);
-  if (strncmp(topic, mqttDeviceTopic, topicPrefixLen) == 0) {
+  if (strncmp(topic, mqttDeviceTopic, topicPrefixLen) == 0)
+  {
     topic += topicPrefixLen;
   }
-  // } else {
-  //   topicPrefixLen = strlen(mqttGroupTopic);
-  //   if (strncmp(topic, mqttGroupTopic, topicPrefixLen) == 0) {
-  //     topic += topicPrefixLen;
-  //   } else {
-  //     // Non-Wled Topic used here. Probably a usermod subscribed to this topic.
-  //     usermods.onMqttMessage(topic, payloadStr);
-  //     delete[] payloadStr;
-  //     return;
-  //   }
-  // }
+  else
+  {
+    topicPrefixLen = strlen(mqttGroupTopic);
+    if (strncmp(topic, mqttGroupTopic, topicPrefixLen) == 0)
+    {
+      topic += topicPrefixLen;
+    }
+    else
+    {
+      // Non-Wled Topic used here. Probably a usermod subscribed to this topic.
+      usermods.onMqttMessage(topic, payloadStr);
+      delete[] payloadStr;
+      return;
+    }
+  }
 
-  //Prefix is stripped from the topic at this point
+  // Prefix is stripped from the topic at this point
+    DEBUG_PRINTLN(topic);
 
-  // if (strcmp_P(topic, PSTR("/test")) == 0) {
-  //    DEBUG_PRINTLN(payloadStr);(char*)payloadStr);
-  //  } 
-   
-   //else if (strcmp_P(topic, PSTR("/api")) == 0) {
-  //   if (!requestJSONBufferLock(15)) { delete[] payloadStr; return; }
-  //   if (payload[0] == '{') { //JSON API
-  //     deserializeJson(doc, payloadStr);
-  //     deserializeState(doc.as<JsonObject>());
-  //   } else { //HTTP API
-  //     String apireq = "win"; apireq += '&'; // reduce flash string usage
-  //     apireq += (char*)payloadStr;
-  //     handleSet(nullptr, apireq);
-  //   }
-  //   releaseJSONBufferLock();
-  // } else if (strlen(topic) != 0) {
-  //   // non standard topic, check with usermods
-  //   usermods.onMqttMessage(topic, payloadStr);
-  // } else {
-  //   // topmost topic (just wled/MAC)
-  //   parseMQTTBriPayload(payloadStr);
-  // }
+  if (strcmp_P(topic, PSTR("/col")) == 0)
+  {
+    DEBUG_PRINTLN(payloadStr);
+  }
+  else if (strcmp_P(topic, PSTR("/api")) == 0)
+  {
+    if (!requestJSONBufferLock(15))
+    {
+      delete[] payloadStr;
+      payloadStr = nullptr;
+      return;
+    }
+    if (payloadStr[0] == '{')
+    { // JSON API
+      deserializeJson(doc, payloadStr);
+      deserializeState(doc.as<JsonObject>());
+    }
+    else
+    { // HTTP API
+      String apireq = "win";
+      apireq += '&'; // reduce flash string usage
+      apireq += payloadStr;
+      handleSet(nullptr, apireq);
+    }
+    releaseJSONBufferLock();
+  }
+  else if (strcmp_P(topic, PSTR("/json")) == 0)
+  {
+    DEBUG_PRINTLN("json");
+
+    if (!requestJSONBufferLock(19))
+    {
+      delete[] payloadStr;
+      payloadStr = nullptr;
+      return;
+    }
+    char subuf[64];
+    strcpy(subuf, mqttDeviceTopic);
+    // create the JsonDocument
+    StaticJsonDocument<800> doc2;
+
+    // create a variant
+    JsonVariant object = doc2.to<JsonObject>();
+    DEBUG_PRINTLN("state");
+
+    if (payloadStr[0] == '1')
+    {
+      DEBUG_PRINTLN("payload1");
+
+      // Use the topic argument to create a custom topic
+      strcat(subuf, "/stat/state");
+      serializeState(object);
+    }
+    else if (payloadStr[0] == '2')
+    {
+      DEBUG_PRINTLN("payload2");
+
+      // Use the topic argument to create a custom topic
+      strcat(subuf, "/stat/info");
+      serializeInfo(object);
+    }
+
+    // serialize the object and send the result to Serial
+    serializeJson(doc2, Serial);
+
+    size_t size = measureJson(doc2.as<JsonObject>());
+    DEBUG_PRINT("JSON size: ");
+    DEBUG_PRINTLN(size);
+    char payload[800];
+    serializeJson(doc2, payload);
+    mqtt->publish(subuf, 0, false, payload);
+    releaseJSONBufferLock();
+  }
+
+  else if (strlen(topic) != 0)
+  {
+    // non standard topic, check with usermods
+    usermods.onMqttMessage(topic, payloadStr);
+  }
+  else
+  {
+    // topmost topic (just wled/MAC)
+    //parseMQTTBriPayload(payloadStr);
+  }
   delete[] payloadStr;
   payloadStr = nullptr;
 }

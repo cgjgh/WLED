@@ -70,8 +70,8 @@ void handleSettingsSet(AsyncWebServerRequest *request, byte subPage)
     strlcpy(serverDescription, request->arg(F("DS")).c_str(), 33);
   }
 
-  //SYNC
-  if (subPage == SUBPAGE_SYNC)
+  //MQTT
+  if (subPage == SUBPAGE_MQTT)
   {
     #ifdef WLED_ENABLE_MQTT
     mqttEnabled = request->hasArg(F("MQ"));
@@ -83,8 +83,6 @@ void handleSettingsSet(AsyncWebServerRequest *request, byte subPage)
     strlcpy(mqttClientID, request->arg(F("MQCID")).c_str(), 41);
     strlcpy(mqttDeviceTopic, request->arg(F("MD")).c_str(), MQTT_MAX_TOPIC_LEN+1);
     strlcpy(mqttGroupTopic, request->arg(F("MG")).c_str(), MQTT_MAX_TOPIC_LEN+1);
-    buttonPublishMqtt = request->hasArg(F("BM"));
-    retainMqttMsg = request->hasArg(F("RT"));
     #endif
 
     // t = request->arg(F("BD")).toInt();

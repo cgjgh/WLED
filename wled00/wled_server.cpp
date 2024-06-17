@@ -452,7 +452,7 @@ void serveSettings(AsyncWebServerRequest* request, bool post)
     else if (url.indexOf("wifi") > 0) subPage = SUBPAGE_WIFI;
     else if (url.indexOf("leds") > 0) subPage = SUBPAGE_LEDS;
     else if (url.indexOf("ui")   > 0) subPage = SUBPAGE_UI;
-    else if (url.indexOf("sync") > 0) subPage = SUBPAGE_SYNC;
+    else if (url.indexOf("mqtt") > 0) subPage = SUBPAGE_MQTT;
     else if (url.indexOf("time") > 0) subPage = SUBPAGE_TIME;
     else if (url.indexOf("sec")  > 0) subPage = SUBPAGE_SEC;
     else if (url.indexOf("dmx")  > 0) subPage = SUBPAGE_DMX;
@@ -485,7 +485,7 @@ void serveSettings(AsyncWebServerRequest* request, bool post)
       case SUBPAGE_WIFI   : strcpy_P(s, PSTR("WiFi")); strcpy_P(s2, PSTR("Please connect to the new IP (if changed)")); forceReconnect = true; break;
       case SUBPAGE_LEDS   : strcpy_P(s, PSTR("LED")); break;
       case SUBPAGE_UI     : strcpy_P(s, PSTR("UI")); break;
-      case SUBPAGE_SYNC   : strcpy_P(s, PSTR("Sync")); break;
+      case SUBPAGE_MQTT   : strcpy_P(s, PSTR("MQTT")); break;
       case SUBPAGE_TIME   : strcpy_P(s, PSTR("Time")); break;
       case SUBPAGE_SEC    : strcpy_P(s, PSTR("Security")); if (doReboot) strcpy_P(s2, PSTR("Rebooting, please wait ~10 seconds...")); break;
       case SUBPAGE_DMX    : strcpy_P(s, PSTR("DMX")); break;
@@ -512,7 +512,7 @@ void serveSettings(AsyncWebServerRequest* request, bool post)
   {
     case SUBPAGE_WIFI    : response = request->beginResponse_P(200, "text/html", PAGE_settings_wifi, PAGE_settings_wifi_length); break;
     case SUBPAGE_UI      : response = request->beginResponse_P(200, "text/html", PAGE_settings_ui,   PAGE_settings_ui_length);   break;
-    case SUBPAGE_SYNC    : response = request->beginResponse_P(200, "text/html", PAGE_settings_sync, PAGE_settings_sync_length); break;
+    case SUBPAGE_MQTT    : response = request->beginResponse_P(200, "text/html", PAGE_settings_mqtt, PAGE_settings_mqtt_length); break;
     case SUBPAGE_TIME    : response = request->beginResponse_P(200, "text/html", PAGE_settings_time, PAGE_settings_time_length); break;
     case SUBPAGE_SEC     : response = request->beginResponse_P(200, "text/html", PAGE_settings_sec,  PAGE_settings_sec_length);  break;
 

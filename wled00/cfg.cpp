@@ -500,10 +500,9 @@ bool deserializeConfigSec() {
   JsonObject ap = doc["ap"];
   getStringFromJson(apPass, ap["psk"] , 65);
 
-  //[[maybe_unused]] JsonObject interfaces = doc["if"];
+  [[maybe_unused]] JsonObject interfaces = doc["if"];
 
 #ifdef WLED_ENABLE_MQTT
-  JsonObject interfaces = doc.createNestedObject("if");
   JsonObject if_mqtt = interfaces["mqtt"];
   getStringFromJson(mqttPass, if_mqtt["psk"], 65);
 #endif
@@ -536,9 +535,8 @@ void serializeConfigSec() {
   JsonObject ap = doc.createNestedObject("ap");
   ap["psk"] = apPass;
 
-  //[[maybe_unused]] JsonObject interfaces = doc.createNestedObject("if");
+  [[maybe_unused]] JsonObject interfaces = doc.createNestedObject("if");
 #ifdef WLED_ENABLE_MQTT
-  JsonObject interfaces = doc.createNestedObject("if");
   JsonObject if_mqtt = interfaces.createNestedObject("mqtt");
   if_mqtt["psk"] = mqttPass;
 #endif

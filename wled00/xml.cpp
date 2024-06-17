@@ -451,7 +451,7 @@ void getSettingsJS(byte subPage, char* dest)
   // #endif
   }
 
-  if (subPage == SUBPAGE_SYNC)
+  if (subPage == SUBPAGE_MQTT)
   {
     char nS[8];
     
@@ -468,8 +468,6 @@ void getSettingsJS(byte subPage, char* dest)
     sappends('s',SET_F("MQCID"),mqttClientID);
     sappends('s',"MD",mqttDeviceTopic);
     sappends('s',SET_F("MG"),mqttGroupTopic);
-    sappend('c',SET_F("BM"),buttonPublishMqtt);
-    sappend('c',SET_F("RT"),retainMqttMsg);
     oappend(SET_F("d.Sf.MD.maxlength=")); oappend(itoa(MQTT_MAX_TOPIC_LEN,nS,10));  oappend(SET_F(";"));
     oappend(SET_F("d.Sf.MG.maxlength=")); oappend(itoa(MQTT_MAX_TOPIC_LEN,nS,10));  oappend(SET_F(";"));
     oappend(SET_F("d.Sf.MS.maxlength=")); oappend(itoa(MQTT_MAX_SERVER_LEN,nS,10));  oappend(SET_F(";"));

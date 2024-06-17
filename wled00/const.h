@@ -131,7 +131,7 @@
 #define SUBPAGE_WIFI              1
 #define SUBPAGE_LEDS              2
 #define SUBPAGE_UI                3
-#define SUBPAGE_SYNC              4
+#define SUBPAGE_MQTT              4
 #define SUBPAGE_TIME              5
 #define SUBPAGE_SEC               6
 #define SUBPAGE_DMX               7
