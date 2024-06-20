@@ -22,6 +22,9 @@ private:
   ulong buttonPressCounter = 0;
 
   // default timing settings
+  const int connectedStatusLedRate = 1000;   // Blink rate when connected (in milliseconds)
+  const int disconnectedStatusLedRate = 100; // Blink rate when disconnected (in milliseconds)
+  int statusLedRate = disconnectedStatusLedRate;
   const int statusLedOnTime = 1000;
   const int stallLedOnTime = 1000;
   const int IDLedOnTime = 1000;
@@ -154,7 +157,7 @@ public:
       stallChange = digitalRead(stallChangePin);
 
       // simulate stall change with speed of +-1 of supplied value
-      stallChange = simulateStallChange(10);
+      // stallChange = simulateStallChange(10);
 
       if (stallChange == HIGH && millis() - lastStallChange > minDelayBetweenStalls)
       {
@@ -170,7 +173,6 @@ public:
           }
 
           writeRegister(stallReg, stallChangeCounter); // set stall led register to counter value
-          Serial.println("Modbus");
         }
 
         lastStallChange = millis();
@@ -207,30 +209,6 @@ public:
         }
       }
 
-      // turn off rope switch after set delay
-      if (ropeTriggered == 1 && millis() - RSTriggerTime > ropeSwitchOnTime)
-      {
-        ropeTriggered = 0;
-        digitalWrite(ropeTrigLedPin, LOW);
-        digitalWrite(relayPin, LOW);
-      }
-
-      // blink status LED
-      if (enableStatusLED == 1 && millis() - lastStatusLEDBlink > statusLedOnTime)
-      {
-        if (statusLEDState == 0)
-        {
-          digitalWrite(LED_BUILTIN, HIGH);
-          statusLEDState = 1;
-        }
-        else
-        {
-          digitalWrite(LED_BUILTIN, LOW);
-          statusLEDState = 0;
-        }
-        lastStatusLEDBlink = millis();
-      }
-
       buttonPress = digitalRead(buttonPin);
       // IDChange = false;
       if (buttonPress == HIGH && millis() - lastButtonPress > timeBetweenButtonPress)
@@ -261,13 +239,46 @@ public:
       lastInputRead = millis();
     }
 
-    if (WL_CONNECTED)
+    if (WiFi.status() == WL_CONNECTED)
     {
       parlorConnected = 1;
     }
     else
     {
       parlorConnected = 0;
+    }
+    // if (enableStatusLED == 1 && millis() - lastStatusLEDBlink > statusLedOnTime)
+    // {
+    //   if (statusLEDState == 0)
+    //   {
+    //     digitalWrite(LED_BUILTIN, HIGH);
+    //     statusLEDState = 1;
+    //   }
+    //   else
+    //   {
+    //     digitalWrite(LED_BUILTIN, LOW);
+    //     statusLEDState = 0;
+    //   }
+    //   lastStatusLEDBlink = millis();
+    // }
+
+    // turn off rope switch after set delay
+    if (ropeTriggered == 1 && millis() - RSTriggerTime > ropeSwitchOnTime)
+    {
+      ropeTriggered = 0;
+      digitalWrite(ropeTrigLedPin, LOW);
+      digitalWrite(relayPin, LOW);
+    }
+
+    // set blink rate
+    statusLedRate = parlorConnected ? connectedStatusLedRate : disconnectedStatusLedRate;
+
+    // blink status LED
+    if (enableStatusLED == 1 && millis() - lastStatusLEDBlink > statusLedRate)
+    {
+      digitalWrite(LED_BUILTIN, statusLEDState == 0 ? HIGH : LOW);
+      statusLEDState = !statusLEDState; // Toggle the LED state
+      lastStatusLEDBlink = millis();    // Update the last blink time
     }
   }
 };
