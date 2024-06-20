@@ -16,7 +16,6 @@ private:
   const int stallReg = 100;
   const int toggleReg = 101;
   const int idReg = 102;
-  IPAddress remote(4, 3, 2, 1);
   ModbusIP mb; // ModbusTCP object
 
   ulong stallChangeCounter = 0;
@@ -31,12 +30,13 @@ private:
   const int maxDelayBetweenID_StallChange = 3500;
   const int IDBeforeStallWaitTime = 4000;
   const int checkInterval = 5;
-  const int timeBetweenButtonPress = 1000;
+  const int timeBetweenButtonPress = 2000;
   const int LEDAltBlink = 500;
 
   // input pin assignments
   const byte stallChangePin = 23;
   const byte IDChangePin = 22;
+  const byte buttonPin = 21;
 
   // output pin assignments
   const byte stallLedPin = 16;
@@ -44,7 +44,6 @@ private:
   const byte noIDLedPin = 12;
   const byte ropeTrigLedPin = 13;
   const byte relayPin = 15;
-  const byte buttonPin = 21;
 
   // LED Status
   bool StallLedOn = 0;
@@ -82,6 +81,7 @@ public:
     // init inputs
     pinMode(stallChangePin, INPUT);
     pinMode(IDChangePin, INPUT);
+    pinMode(buttonPin, INPUT);
 
     // init outputs
     pinMode(IDLedPin, OUTPUT);
@@ -99,6 +99,7 @@ public:
   void connected()
   {
     parlorConnected = 1;
+    mb.connect(remote); // Try to connect if no connection
     mb.client();
   }
 
@@ -127,15 +128,12 @@ public:
   {
     if (mb.isConnected(remote))
     { // Check if connection to Modbus Slave is established
-      uint16_t trans = mb.writeHreg(remote, reg, value);
-      while (mb.isTransaction(trans))
-      { // Check if transaction is active
-        mb.task();
-        delay(5);
-      }
+      mb.writeHreg(remote, reg, value);
+      Serial.println("Completed Write");
     }
     else
     {
+      Serial.println("No Connection");
       mb.connect(remote); // Try to connect if no connection
     }
   }
@@ -156,7 +154,7 @@ public:
       stallChange = digitalRead(stallChangePin);
 
       // simulate stall change with speed of +-1 of supplied value
-      // stallChange = simulateStallChange(10);
+      stallChange = simulateStallChange(10);
 
       if (stallChange == HIGH && millis() - lastStallChange > minDelayBetweenStalls)
       {
@@ -167,8 +165,12 @@ public:
         {
           stallChangeCounter++;
           if (stallChangeCounter > 1000)
+          {
             stallChangeCounter = 0;
+          }
+
           writeRegister(stallReg, stallChangeCounter); // set stall led register to counter value
+          Serial.println("Modbus");
         }
 
         lastStallChange = millis();
