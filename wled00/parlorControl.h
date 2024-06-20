@@ -3,32 +3,29 @@
 #include "wled.h"
 #include <NeoPixelBus.h>
 #include <RunningMedian.h>
-
-#define COLOR_SATURATION 255
-
-/*
- * Usermods allow you to add own functionality to WLED more easily
- * See: https://github.com/Aircoookie/WLED/wiki/Add-own-functionality
- *
- * This is an example for a v2 usermod.
- * v2 usermods are class inheritance based and can (but don't have to) implement more functions, each of them is shown in this example.
- * Multiple v2 usermods can be added to one compilation easily.
- *
- * Creating a usermod:
- * This file serves as an example. If you want to create a usermod, it is recommended to use usermod_v2_empty.h from the usermods folder as a template.
- * Please remember to rename the class and file to a descriptive name.
- * You may also use multiple .h and .cpp files.
- *
- * Using a usermod:
- * 1. Copy the usermod into the sketch folder (same folder as wled00.ino)
- * 2. Register the usermod by adding #include "usermod_filename.h" in the top and registerUsermod(new MyUsermodClass()) in the bottom of usermods_list.cpp
- */
+#include <ModbusIP_ESP8266.h>
 
 #pragma region leds
+
+#define COLOR_SATURATION 255
 
 const uint16_t PixelCount = 24;
 const uint8_t PixelPin = 15;
 uint8_t colorSaturation = COLOR_SATURATION;
+
+// LED Start Index
+byte autoLedStart = 0;
+byte stallLedStart = 6;
+byte cowFWDSafetyLedStart = 12;
+byte spareLEDStart = 18;
+
+enum Light
+{
+  autoStop = 0,
+  stall = 1,
+  cowFWD = 2,
+  spare = 3,
+};
 
 // three element pixels, in different order and speeds
 NeoPixelBus<NeoGrbFeature, NeoWs2812xMethod> strip(PixelCount, PixelPin);
@@ -53,6 +50,9 @@ RgbColor stallLedState = black;
 RgbColor cowFWDSafetyLedState = black;
 byte statusLedState = 0;
 RgbColor spareLedState = black;
+
+#pragma endregion
+
 // class name. Use something descriptive and leave the ": public Usermod" part :)
 class ParlorControl : public Usermod
 {
@@ -60,6 +60,7 @@ class ParlorControl : public Usermod
 private:
   // Private class members. You can declare variables and functions only accessible to your usermod here
 
+#pragma region states
   enum AutoMode
   {
     fullAuto = 1,
@@ -107,40 +108,31 @@ private:
   HornMode hornMode = stopFailure;
   ParlorWashMode parlorWashMode = onFWDNoWashCIP;
 
-  // LED Start Index
-  byte autoLedStart = 0;
-  byte stallLedStart = 6;
-  byte cowFWDSafetyLedStart = 12;
-  byte spareLEDStart = 18;
-
-  enum Light
-  {
-    autoStop = 0,
-    stall = 1,
-    cowFWD = 2,
-    spare = 3,
-  };
-
-#pragma endregion
-
-  RunningMedian speedSamples = RunningMedian(5);
+#pragma endregion states
 
 #pragma region variables
+
   bool autoStopEnabled = 1;
   bool splitterDisabled = 1;
   bool enableStatusLED = 1;
 
+  // LED Defaults
   const int statusLedOnTime = 1000;
   const int stallLedOnTime = 1000;
+
+  // read intervals
+  const byte inputReadInterval = 20;
+  const byte modbusReadInterval = 20;
+
+  // delay defaults
   const int minDelayBetweenStalls = 750;
-  const int inputReadInterval = 20;
   const int parlorStopFailureDelay = 750;
   const int exitFWDSafetyDelay = 750;
 
+  // stall vars
   const byte initialStall = 27;
   byte currentStall = initialStall;
   byte CIPStall = 0;
-
   byte stallsBetweenGroup = 4;
 
   float speedSetpoint = 13.0;
@@ -190,16 +182,18 @@ private:
   bool washRelayState = 0;
 
   // millis() time of last...
-  long lastStallChange = 0;
-  long lastLEDBlink = 0;
-  long lastStatusLEDBlink = 0;
-  long lastStallLEDBlink = 0;
-  long lastInputRead = 0;
-  long lastSpeedLEDSet = 0;
-  long lastCowFWDSafetySwitchNotTriggered = 0;
-  long lastParlorStopRelayTriggered = 0;
-  long lastFWDSafetyNotTrig = 0;
-  long lastFWDSafetyCheck = 0;
+  ulong lastStallChange = 0;
+  ulong lastLEDBlink = 0;
+  ulong lastStatusLEDBlink = 0;
+  ulong lastStallLEDBlink = 0;
+  ulong lastInputRead = 0;
+  ulong lastSpeedLEDSet = 0;
+  ulong lastCowFWDSafetySwitchNotTriggered = 0;
+  ulong lastParlorStopRelayTriggered = 0;
+  ulong lastFWDSafetyNotTrig = 0;
+  ulong lastFWDSafetyCheck = 0;
+  ulong lastModbusRead = 0;
+  ulong lastModbusTask = 0;
 
   // parlor vars
   bool stallChange = 0;
@@ -212,7 +206,6 @@ private:
   bool cowFWDSafetySwitch = 0;
   bool parlorStopFailureDetected = 0;
   bool gotCIP = 0;
-
   int conseqSkippedStalls = 0;
   byte groupsDone = 0;
   bool newGroup = 0;
@@ -231,13 +224,15 @@ private:
   int totalStopFailures = 0;
   int totalSafetySwitchTriggers = 0;
 
+  // Modbus change tracking
+  ulong stallCounter = 0;
+  ulong toggleCounter = 0;
+
   // misc
   bool speedMeasured = 0;
-  long timeToStallCenterPos = 0;
+  ulong timeToStallCenterPos = 0;
 
-#pragma endregion
-
-  // leds
+#pragma endregion variables
 
   enum Relays
   {
@@ -246,6 +241,12 @@ private:
     water = 3,
     wash = 4,
   };
+
+  // speed samplings
+  RunningMedian speedSamples = RunningMedian(5);
+
+  // Modbus TCP server
+  ModbusIP mb;
 
   bool enabled = true;
   bool initDone = false;
@@ -257,6 +258,8 @@ private:
 
   // any private methods should go here (non-inline method should be defined out of class)
   void publishMqtt(const char *state, const char *topic, bool retain = false); // example for publishing MQTT message
+  bool onMqttMessage(char *topic, char *payload);
+  void onMqttConnect(bool sessionPresent);
   void setLEDRange(Light light, RgbColor color);
   void setLightColor(Light light, RgbColor color);
   void hsvToRgb(byte h, byte s, byte v, byte &r, byte &g, byte &b);
@@ -268,13 +271,7 @@ private:
   void stall_Change();
   void resetStats();
 
-  void _initialize()
-  {
-  }
-
 public:
-  // non WLED related methods, may be used for data exchange between usermods (non-inline methods should be defined out of class)
-
   /**
    * Enable/Disable the usermod
    */
@@ -285,8 +282,6 @@ public:
    */
   inline bool isEnabled() { return enabled; }
 
-  // methods called by WLED (can be inlined as they are called only once but if you call them explicitly define them out of class)
-
   /*
    * setup() is called once at boot. WiFi is not yet connected at this point.
    * readFromConfig() is called prior to setup()
@@ -294,7 +289,6 @@ public:
    */
   void setup()
   {
-    // do your set-up here
     // initialize inputs
     pinMode(stallSensorPin, INPUT);
     pinMode(splitterSwitchPin, INPUT);
@@ -304,7 +298,6 @@ public:
     pinMode(cowFWDsafetySwitchPin, INPUT);
 
     // initialize Light
-
     strip.Begin();
     strip.Show();
 
@@ -320,6 +313,7 @@ public:
     digitalWrite(waterRelayPin, LOW);
     digitalWrite(washRelayPin, LOW);
     digitalWrite(2, LOW);
+
     initDone = true;
   }
 
@@ -329,7 +323,12 @@ public:
    */
   void connected()
   {
-    // Serial.println("Connected to WiFi!");
+    IPAddress myIP = WiFi.softAPIP();
+    Serial.print("AP IP address: ");
+    Serial.println(myIP);
+    mb.server(); // Start Modbus IP
+    mb.addHreg(100, 0, 1);
+    mb.addHreg(101, 0, 1);
   }
 
   void loop()
@@ -338,30 +337,68 @@ public:
     if (!enabled)
       return;
 
-     if (waterChaserMode == chaserOff)
+    // Modbus TCP
+
+    // Modbus "magic"
+    if (millis() - lastModbusTask > 10)
+    {
+      mb.task();
+    }
+
+    // Modbus read registers for changes
+    if (millis() - lastModbusRead > modbusReadInterval)
+    {
+      uint16_t lastStallCount = mb.Hreg(100);
+      uint16_t lastToggleCount = mb.Hreg(101);
+      if (lastStallCount != stallCounter)
       {
-        setRelay(water, 0);
-      }
-      else if (waterChaserMode == chaserOn){
-        setRelay(water, 1);
+        stall_Change();
       }
 
-      if (milkerWashMode == valveOff)
+      if (lastToggleCount != toggleCounter)
       {
-        setRelay(wash, 0);
-      }
-      else if (milkerWashMode == valveOn){
-        setRelay(wash, 1);
+        if (autoStopEnabled)
+        {
+          autoStopEnabled = 0;
+        }
+        else
+        {
+          autoStopEnabled = 1;
+        }
       }
 
-      if (hornMode == hornOff)
-      {
-        setRelay(horn, 0);
-      }
-      else if (hornMode == hornOn){
-        setRelay(horn, 1);
-      }
+      stallCounter = lastStallCount;
+      toggleCounter = lastToggleCount;
 
+      lastModbusRead = millis();
+    }
+
+    if (waterChaserMode == chaserOff)
+    {
+      setRelay(water, 0);
+    }
+    else if (waterChaserMode == chaserOn)
+    {
+      setRelay(water, 1);
+    }
+
+    if (milkerWashMode == valveOff)
+    {
+      setRelay(wash, 0);
+    }
+    else if (milkerWashMode == valveOn)
+    {
+      setRelay(wash, 1);
+    }
+
+    if (hornMode == hornOff)
+    {
+      setRelay(horn, 0);
+    }
+    else if (hornMode == hornOn)
+    {
+      setRelay(horn, 1);
+    }
 
     if (millis() - lastInputRead > inputReadInterval)
     {
@@ -773,6 +810,7 @@ public:
     }
   }
 
+#pragma region Config
   /*
    * addToJsonInfo() can be used to add custom entries to the /json/info part of the JSON API.
    * Creating an "u" object allows you to add custom key/value pairs to the Info section of the WLED web UI.
@@ -946,11 +984,14 @@ public:
     // oappend(SET_F("addOption(dd,'Everything',42);"));
   }
 
+#pragma endregion Config
+
   /**
    * handleButton() can be used to override default button behaviour. Returning true
    * will prevent button working in a default way.
    * Replicating button.cpp
    */
+
   bool handleButton(uint8_t b)
   {
     yield();
@@ -964,176 +1005,178 @@ public:
     // do your button handling here
     return handled;
   }
-
-#ifndef WLED_DISABLE_MQTT
-  /**
-   * handling of MQTT message
-   * topic only contains stripped topic (part after /wled/MAC)
-   */
-  bool onMqttMessage(char *topic, char *payload)
-  {
-    // Handling specific topics
-    if (strcmp(topic, "/cmnd/auto") == 0)
-    {
-      if (strlen(payload) == 0)
-      {
-        char modeStr[10];
-        snprintf(modeStr, sizeof(modeStr), "%d", autoStopEnabled);
-        publishMqtt(modeStr, "/stat/auto", true);
-      }
-      else
-      {
-        autoStopEnabled = atoi(payload);
-        publishMqtt(payload, "/stat/auto", true); // Confirm success
-      }
-    }
-    else if (strcmp(topic, "/cmnd/speed") == 0)
-    {
-      if (strlen(payload) == 0)
-      {
-        char speedStr[10];
-        snprintf(speedStr, sizeof(speedStr), "%.2f", parlorSpeed);
-        publishMqtt(speedStr, "/stat/speed", true);
-      }
-      else
-      {
-        speedSetpoint = atof(payload);
-        publishMqtt(payload, "/stat/speed", true); // Confirm success
-      }
-    }
-    else if (strcmp(topic, "/cmnd/stall") == 0)
-    {
-      if (strlen(payload) == 0)
-      {
-        char stallStr[10];
-        snprintf(stallStr, sizeof(stallStr), "%d", currentStall);
-        publishMqtt(stallStr, "/stat/stall", true);
-      }
-      else
-      {
-        currentStall = atoi(payload);
-        publishMqtt(payload, "/stat/stall", true); // Confirm success
-      }
-    }
-    else if (strcmp(topic, "/cmnd/water/exitwash") == 0)
-    {
-      if (strlen(payload) == 0)
-      {
-        char waterExitWashStr[10];
-        snprintf(waterExitWashStr, sizeof(waterExitWashStr), "%d", milkerWashMode);
-        publishMqtt(waterExitWashStr, "/stat/water/exitwash", true);
-      }
-      else
-      {
-        milkerWashMode = MilkerWashMode(atoi(payload));
-        publishMqtt(payload, "/stat/water/exitwash", true); // Confirm success
-      }
-    }
-    else if (strcmp(topic, "/cmnd/water/exitchase") == 0)
-    {
-      if (strlen(payload) == 0)
-      {
-        char waterExitChaseStr[10];
-        snprintf(waterExitChaseStr, sizeof(waterExitChaseStr), "%d", waterChaserMode);
-        publishMqtt(waterExitChaseStr, "/stat/water/exitchase", true);
-      }
-      else
-      {
-        waterChaserMode = WaterChaserMode(atoi(payload));
-        publishMqtt(payload, "/stat/water/exitchase", true); // Confirm success
-      }
-    }
-    else if (strcmp(topic, "/cmnd/water/parlorwash") == 0)
-    {
-      if (strlen(payload) == 0)
-      {
-        char parlorWashModeStr[10];
-        snprintf(parlorWashModeStr, sizeof(parlorWashModeStr), "%d", parlorWashMode);
-        publishMqtt(parlorWashModeStr, "/stat/water/parlorwash", true);
-      }
-      else
-      {
-        parlorWashMode = ParlorWashMode(atoi(payload));
-        publishMqtt(payload, "/stat/water/parlorwash", true); // Confirm success
-      }
-    }
-    else if (strcmp(topic, "/cmnd/cip") == 0)
-    {
-      if (strlen(payload) == 0)
-      {
-        char cipStr[10];
-        snprintf(cipStr, sizeof(cipStr), "%d", CIPStall);
-        publishMqtt(cipStr, "/stat/cip", true);
-      }
-      else
-      {
-        CIPStall = atoi(payload);
-        publishMqtt(payload, "/stat/cip", true); // Confirm success
-      }
-    }
-    else if (strcmp(topic, "/cmnd/group") == 0)
-    {
-      if (strlen(payload) == 0)
-      {
-        char groupStr[10];
-        snprintf(groupStr, sizeof(groupStr), "%d", groupsDone);
-        publishMqtt(groupStr, "/stat/group", true);
-      }
-      else
-      {
-        groupsDone = atoi(payload);
-        publishMqtt(payload, "/stat/group", true); // Confirm success
-      }
-    }
-    else if (strcmp(topic, "/cmnd/horn") == 0)
-    {
-      if (strlen(payload) == 0)
-      {
-        char hornStr[10];
-        snprintf(hornStr, sizeof(hornStr), "%d", hornMode);
-        publishMqtt(hornStr, "/stat/horn", true);
-      }
-      else
-      {
-        hornMode = HornMode(atoi(payload));
-        publishMqtt(payload, "/stat/horn", true); // Confirm success
-      }
-    }
-    else if (strcmp(topic, "/cmnd/mode") == 0)
-    {
-      // This topic only publishes the current mode, no confirmation needed.
-      char modeStr[10];
-      snprintf(modeStr, sizeof(modeStr), "%d", currentMode);
-      publishMqtt(modeStr, "/stat/mode", true);
-    }
-    // If none of the topics match, return false
-    return false;
-  }
-
-  /**
-   * onMqttConnect() is called when MQTT connection is established
-   */
-  void onMqttConnect(bool sessionPresent)
-  {
-    // do any MQTT related initialisation here
-    char subuf[38];
-    if (mqttDeviceTopic[0] != 0)
-    {
-      strlcpy(subuf, mqttDeviceTopic, 33);
-      mqtt->subscribe(subuf, 0);
-      strcat_P(subuf, PSTR("/cmnd/#"));
-      mqtt->subscribe(subuf, 0);
-
-      DEBUG_PRINTLN("MQTT Connected");
-      publishMqtt("Connected", "/stat", true);
-    }
-  }
-#endif
 };
 
 // add more strings here to reduce flash memory usage
 const char ParlorControl::_name[] PROGMEM = "ParlorControl";
 const char ParlorControl::_enabled[] PROGMEM = "enabled";
+
+#pragma region Class Methods
+#pragma region MQTT
+#ifndef WLED_DISABLE_MQTT
+/**
+ * handling of MQTT message
+ * topic only contains stripped topic (part after /wled/MAC)
+ */
+bool ParlorControl::onMqttMessage(char *topic, char *payload)
+{
+  // Handling specific topics
+  if (strcmp(topic, "/cmnd/auto") == 0)
+  {
+    if (strlen(payload) == 0)
+    {
+      char modeStr[10];
+      snprintf(modeStr, sizeof(modeStr), "%d", autoStopEnabled);
+      publishMqtt(modeStr, "/stat/auto", true);
+    }
+    else
+    {
+      autoStopEnabled = atoi(payload);
+      publishMqtt(payload, "/stat/auto", true); // Confirm success
+    }
+  }
+  else if (strcmp(topic, "/cmnd/speed") == 0)
+  {
+    if (strlen(payload) == 0)
+    {
+      char speedStr[10];
+      snprintf(speedStr, sizeof(speedStr), "%.2f", parlorSpeed);
+      publishMqtt(speedStr, "/stat/speed", true);
+    }
+    else
+    {
+      speedSetpoint = atof(payload);
+      publishMqtt(payload, "/stat/speed", true); // Confirm success
+    }
+  }
+  else if (strcmp(topic, "/cmnd/stall") == 0)
+  {
+    if (strlen(payload) == 0)
+    {
+      char stallStr[10];
+      snprintf(stallStr, sizeof(stallStr), "%d", currentStall);
+      publishMqtt(stallStr, "/stat/stall", true);
+    }
+    else
+    {
+      currentStall = atoi(payload);
+      publishMqtt(payload, "/stat/stall", true); // Confirm success
+    }
+  }
+  else if (strcmp(topic, "/cmnd/water/exitwash") == 0)
+  {
+    if (strlen(payload) == 0)
+    {
+      char waterExitWashStr[10];
+      snprintf(waterExitWashStr, sizeof(waterExitWashStr), "%d", milkerWashMode);
+      publishMqtt(waterExitWashStr, "/stat/water/exitwash", true);
+    }
+    else
+    {
+      milkerWashMode = MilkerWashMode(atoi(payload));
+      publishMqtt(payload, "/stat/water/exitwash", true); // Confirm success
+    }
+  }
+  else if (strcmp(topic, "/cmnd/water/exitchase") == 0)
+  {
+    if (strlen(payload) == 0)
+    {
+      char waterExitChaseStr[10];
+      snprintf(waterExitChaseStr, sizeof(waterExitChaseStr), "%d", waterChaserMode);
+      publishMqtt(waterExitChaseStr, "/stat/water/exitchase", true);
+    }
+    else
+    {
+      waterChaserMode = WaterChaserMode(atoi(payload));
+      publishMqtt(payload, "/stat/water/exitchase", true); // Confirm success
+    }
+  }
+  else if (strcmp(topic, "/cmnd/water/parlorwash") == 0)
+  {
+    if (strlen(payload) == 0)
+    {
+      char parlorWashModeStr[10];
+      snprintf(parlorWashModeStr, sizeof(parlorWashModeStr), "%d", parlorWashMode);
+      publishMqtt(parlorWashModeStr, "/stat/water/parlorwash", true);
+    }
+    else
+    {
+      parlorWashMode = ParlorWashMode(atoi(payload));
+      publishMqtt(payload, "/stat/water/parlorwash", true); // Confirm success
+    }
+  }
+  else if (strcmp(topic, "/cmnd/cip") == 0)
+  {
+    if (strlen(payload) == 0)
+    {
+      char cipStr[10];
+      snprintf(cipStr, sizeof(cipStr), "%d", CIPStall);
+      publishMqtt(cipStr, "/stat/cip", true);
+    }
+    else
+    {
+      CIPStall = atoi(payload);
+      publishMqtt(payload, "/stat/cip", true); // Confirm success
+    }
+  }
+  else if (strcmp(topic, "/cmnd/group") == 0)
+  {
+    if (strlen(payload) == 0)
+    {
+      char groupStr[10];
+      snprintf(groupStr, sizeof(groupStr), "%d", groupsDone);
+      publishMqtt(groupStr, "/stat/group", true);
+    }
+    else
+    {
+      groupsDone = atoi(payload);
+      publishMqtt(payload, "/stat/group", true); // Confirm success
+    }
+  }
+  else if (strcmp(topic, "/cmnd/horn") == 0)
+  {
+    if (strlen(payload) == 0)
+    {
+      char hornStr[10];
+      snprintf(hornStr, sizeof(hornStr), "%d", hornMode);
+      publishMqtt(hornStr, "/stat/horn", true);
+    }
+    else
+    {
+      hornMode = HornMode(atoi(payload));
+      publishMqtt(payload, "/stat/horn", true); // Confirm success
+    }
+  }
+  else if (strcmp(topic, "/cmnd/mode") == 0)
+  {
+    // This topic only publishes the current mode, no confirmation needed.
+    char modeStr[10];
+    snprintf(modeStr, sizeof(modeStr), "%d", currentMode);
+    publishMqtt(modeStr, "/stat/mode", true);
+  }
+  // If none of the topics match, return false
+  return false;
+}
+
+/**
+ * onMqttConnect() is called when MQTT connection is established
+ */
+void ParlorControl::onMqttConnect(bool sessionPresent)
+{
+  // do any MQTT related initialisation here
+  char subuf[38];
+  if (mqttDeviceTopic[0] != 0)
+  {
+    strlcpy(subuf, mqttDeviceTopic, 33);
+    mqtt->subscribe(subuf, 0);
+    strcat_P(subuf, PSTR("/cmnd/#"));
+    mqtt->subscribe(subuf, 0);
+
+    DEBUG_PRINTLN("MQTT Connected");
+    publishMqtt("Connected", "/stat", true);
+  }
+}
+#endif
 
 // implementation of non-inline member methods
 void ParlorControl::publishMqtt(const char *state, const char *topic, bool retain)
@@ -1143,7 +1186,6 @@ void ParlorControl::publishMqtt(const char *state, const char *topic, bool retai
   if (WLED_MQTT_CONNECTED)
   {
 
-   
     char subuf[64];
     strcpy(subuf, mqttDeviceTopic);
     // Use the topic argument to create a custom topic
@@ -1152,8 +1194,9 @@ void ParlorControl::publishMqtt(const char *state, const char *topic, bool retai
   }
 #endif
 }
+#pragma endregion MQTT
 
-#pragma LED
+#pragma region LED
 void ParlorControl::setLEDRange(Light light, RgbColor color)
 {
   byte start = -1;
@@ -1305,9 +1348,9 @@ RgbColor ParlorControl::generateSpeedColor(float inputValue)
 
   return RgbColor(red, green, blue);
 }
-#pragma endregion
+#pragma endregion LED
 
-#pragma Relay
+#pragma region Relay
 void ParlorControl::setRelay(Relays relay, bool state)
 {
   if (relay == parlor)
@@ -1364,9 +1407,9 @@ void ParlorControl::setRelay(Relays relay, bool state)
     }
   }
 }
-#pragma endregion
+#pragma endregion Relay
 
-#pragma Speed Control
+#pragma region Speed Control
 float ParlorControl::round_to_dp(float in_value, int decimal_place)
 {
   float multiplier = powf(10.0f, decimal_place);
@@ -1409,9 +1452,9 @@ void ParlorControl::getMedianSpeed()
   }
   speedMeasured = 1;
 }
-#pragma endregion
+#pragma endregion Speed Control
 
-#pragma Stall Functions
+#pragma region Stall Functions
 void ParlorControl::increment_stall()
 {
   currentStall += 1;
@@ -1435,6 +1478,7 @@ void ParlorControl::stall_Change()
   speedMeasured = 0;
   DEBUG_PRINTLN("Stall Change");
 }
+#pragma endregion Stall Functions
 
 void ParlorControl::resetStats()
 {
@@ -1459,4 +1503,4 @@ void ParlorControl::resetStats()
   }
 }
 
-#pragma endregion
+#pragma endregion Class Methods

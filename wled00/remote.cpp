@@ -5,6 +5,7 @@
 #define ESP_NOW_STATE_ERROR        2
 
 
+#define WLED_DISABLE_ESPNOW
 #ifdef WLED_DISABLE_ESPNOW
 void handleRemote(){}
 #else

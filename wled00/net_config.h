@@ -4,7 +4,7 @@
 #define SERVERNAME "Parlor"
 
 #define WLED_AP_SSID "Parlor"
-#define WLED_AP_PASS "wled1234"
+#define WLED_AP_PASS "987123654"
 
 #define AP_BEHAVIOR AP_BEHAVIOR_ALWAYS
 
