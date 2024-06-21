@@ -270,6 +270,7 @@ private:
   void increment_stall();
   void stall_Change();
   void resetStats();
+  void setMode(AutoMode mode);
 
 public:
   /**
@@ -410,7 +411,7 @@ public:
       {
         if (splitterDisabled)
         {
-          currentMode = fullAuto;
+          setMode(fullAuto);
           setLightColor(autoStop, green);
           if (newGroup)
           {
@@ -426,7 +427,7 @@ public:
         {
           if (groupsDone > 3 || completed == 1)
           {
-            currentMode = washCIP;
+            setMode(washCIP);
             setLightColor(autoStop, blue);
 
             // check if parlor stop relay is on
@@ -456,7 +457,7 @@ public:
 
           else
           {
-            currentMode = groupSplit;
+            setMode(groupSplit);
             setLightColor(autoStop, orange);
             // check if parlor stop relay is on
 
@@ -660,7 +661,7 @@ public:
 
         if (currentMode == washCIP && statsReset == 1 && CIPStall > 0)
         {
-          currentMode = prep;
+          setMode(prep);
           completed = 0;
           publishMqtt("", "/get/cip", true);
         }
@@ -710,7 +711,7 @@ public:
 
               else if (groupsDone < 4 && completed != 1)
               {
-                currentMode = groupSplit;
+                setMode(groupSplit);
                 conseqSkippedStalls += 1;
 
                 if (conseqSkippedStalls == (stallsBetweenGroup))
@@ -732,7 +733,7 @@ public:
                     newGroup = 0;
                     completed = 1;
                     groupsDone = 0;
-                    currentMode = washCIP;
+                    setMode(washCIP);
                     setLightColor(stall, orange);
                     setRelay(parlor, 0);
                   }
@@ -759,6 +760,9 @@ public:
           }
         }
         stallChange = 0;
+        char stallStr[3];
+        snprintf(stallStr, sizeof(stallStr), "%d", currentStall);
+        publishMqtt(stallStr, "/stat/stall", true);
       }
     }
 
@@ -1025,9 +1029,9 @@ bool ParlorControl::onMqttMessage(char *topic, char *payload)
   {
     if (strlen(payload) == 0)
     {
-      char modeStr[10];
-      snprintf(modeStr, sizeof(modeStr), "%d", autoStopEnabled);
-      publishMqtt(modeStr, "/stat/auto", true);
+      char autoStr[3];
+      snprintf(autoStr, sizeof(autoStr), "%d", autoStopEnabled);
+      publishMqtt(autoStr, "/stat/auto", true);
     }
     else
     {
@@ -1037,23 +1041,29 @@ bool ParlorControl::onMqttMessage(char *topic, char *payload)
   }
   else if (strcmp(topic, "/cmnd/speed") == 0)
   {
+    char speedStr[10];
+    snprintf(speedStr, sizeof(speedStr), "%.2f", parlorSpeed);
+    publishMqtt(speedStr, "/stat/speed", true);
+  }
+  else if (strcmp(topic, "/cmnd/setspeed") == 0)
+  {
     if (strlen(payload) == 0)
     {
-      char speedStr[10];
-      snprintf(speedStr, sizeof(speedStr), "%.2f", parlorSpeed);
-      publishMqtt(speedStr, "/stat/speed", true);
+      char setspeedStr[10];
+      snprintf(setspeedStr, sizeof(setspeedStr), "%.2f", speedSetpoint);
+      publishMqtt(setspeedStr, "/stat/setspeed", true);
     }
     else
     {
       speedSetpoint = atof(payload);
-      publishMqtt(payload, "/stat/speed", true); // Confirm success
+      publishMqtt(payload, "/stat/setspeed", true); // Confirm success
     }
   }
   else if (strcmp(topic, "/cmnd/stall") == 0)
   {
     if (strlen(payload) == 0)
     {
-      char stallStr[10];
+      char stallStr[3];
       snprintf(stallStr, sizeof(stallStr), "%d", currentStall);
       publishMqtt(stallStr, "/stat/stall", true);
     }
@@ -1067,7 +1077,7 @@ bool ParlorControl::onMqttMessage(char *topic, char *payload)
   {
     if (strlen(payload) == 0)
     {
-      char waterExitWashStr[10];
+      char waterExitWashStr[3];
       snprintf(waterExitWashStr, sizeof(waterExitWashStr), "%d", milkerWashMode);
       publishMqtt(waterExitWashStr, "/stat/water/exitwash", true);
     }
@@ -1081,7 +1091,7 @@ bool ParlorControl::onMqttMessage(char *topic, char *payload)
   {
     if (strlen(payload) == 0)
     {
-      char waterExitChaseStr[10];
+      char waterExitChaseStr[3];
       snprintf(waterExitChaseStr, sizeof(waterExitChaseStr), "%d", waterChaserMode);
       publishMqtt(waterExitChaseStr, "/stat/water/exitchase", true);
     }
@@ -1095,7 +1105,7 @@ bool ParlorControl::onMqttMessage(char *topic, char *payload)
   {
     if (strlen(payload) == 0)
     {
-      char parlorWashModeStr[10];
+      char parlorWashModeStr[3];
       snprintf(parlorWashModeStr, sizeof(parlorWashModeStr), "%d", parlorWashMode);
       publishMqtt(parlorWashModeStr, "/stat/water/parlorwash", true);
     }
@@ -1109,7 +1119,7 @@ bool ParlorControl::onMqttMessage(char *topic, char *payload)
   {
     if (strlen(payload) == 0)
     {
-      char cipStr[10];
+      char cipStr[3];
       snprintf(cipStr, sizeof(cipStr), "%d", CIPStall);
       publishMqtt(cipStr, "/stat/cip", true);
     }
@@ -1123,7 +1133,7 @@ bool ParlorControl::onMqttMessage(char *topic, char *payload)
   {
     if (strlen(payload) == 0)
     {
-      char groupStr[10];
+      char groupStr[3];
       snprintf(groupStr, sizeof(groupStr), "%d", groupsDone);
       publishMqtt(groupStr, "/stat/group", true);
     }
@@ -1137,7 +1147,7 @@ bool ParlorControl::onMqttMessage(char *topic, char *payload)
   {
     if (strlen(payload) == 0)
     {
-      char hornStr[10];
+      char hornStr[3];
       snprintf(hornStr, sizeof(hornStr), "%d", hornMode);
       publishMqtt(hornStr, "/stat/horn", true);
     }
@@ -1150,9 +1160,20 @@ bool ParlorControl::onMqttMessage(char *topic, char *payload)
   else if (strcmp(topic, "/cmnd/mode") == 0)
   {
     // This topic only publishes the current mode, no confirmation needed.
-    char modeStr[10];
+    char modeStr[3];
     snprintf(modeStr, sizeof(modeStr), "%d", currentMode);
     publishMqtt(modeStr, "/stat/mode", true);
+  }
+  else if (strcmp(topic, "/cmnd/ropeswitch") == 0)
+  {
+    publishMqtt("1", "/stat/ropeswitch", true);
+  }
+  else if (strcmp(topic, "/cmnd/uptime") == 0)
+  {
+    // This topic only publishes the current mode, no confirmation needed.
+    char uptimeStr[12];
+    snprintf(uptimeStr, sizeof(uptimeStr), "%lu", millis());
+    publishMqtt(uptimeStr, "/stat/uptime", true);
   }
   // If none of the topics match, return false
   return false;
@@ -1450,6 +1471,9 @@ void ParlorControl::getMedianSpeed()
     lastSpeedLEDSet = millis();
     statusLedState = 1;
   }
+  char speedStr[10];
+  snprintf(speedStr, sizeof(speedStr), "%.2f", parlorSpeed);
+  publishMqtt(speedStr, "/stat/speed", true);
   speedMeasured = 1;
 }
 #pragma endregion Speed Control
@@ -1501,6 +1525,14 @@ void ParlorControl::resetStats()
     completed = 1;
     statsReset = 1;
   }
+}
+
+void ParlorControl::setMode(AutoMode mode)
+{
+  currentMode = mode;
+  char modeStr[3];
+  snprintf(modeStr, sizeof(modeStr), "%d", currentMode);
+  publishMqtt(modeStr, "/stat/mode", true);
 }
 
 #pragma endregion Class Methods
