@@ -68,6 +68,9 @@ void onMqttConnect(bool sessionPresent)
 
   doPublishMqtt = true;
   DEBUG_PRINTLN(F("MQTT ready"));
+  strlcpy(subuf, mqttDeviceTopic, 33);
+  strcat_P(subuf, PSTR("/status"));
+  mqtt->publish(subuf, 0, false, "connected");
 }
 
 

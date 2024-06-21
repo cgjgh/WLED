@@ -1529,10 +1529,14 @@ void ParlorControl::resetStats()
 
 void ParlorControl::setMode(AutoMode mode)
 {
+  AutoMode oldMode = currentMode;
   currentMode = mode;
   char modeStr[3];
   snprintf(modeStr, sizeof(modeStr), "%d", currentMode);
-  publishMqtt(modeStr, "/stat/mode", true);
+  if (oldMode != currentMode)
+  {
+      publishMqtt(modeStr, "/stat/mode", true);
+  }
 }
 
 #pragma endregion Class Methods
