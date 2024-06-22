@@ -1,7 +1,31 @@
 #pragma once
 
+ #define SIMULATE
+
 #include "wled.h"
 #include <ModbusIP_ESP8266.h>
+
+bool ropeSwitch = 0;
+bool initRope = 0;
+uint16_t cbRope(TRegister *reg, uint16_t val)
+{
+  // Check if Coil state is going to be changed
+  if (reg->value != val && initRope != 0)
+  {
+    Serial.print("Set reg: ");
+    Serial.println(val);
+    ropeSwitch = 1;
+  }
+  initRope = 1;
+  return val;
+}
+
+// Callback function for client connect. Returns true to allow connection.
+bool cbConn(IPAddress ip)
+{
+  Serial.println(ip);
+  return true;
+}
 
 class StallChangeMon : public Usermod
 {
@@ -12,18 +36,22 @@ private:
   // config
   bool enableStatusLED = 1;
 
-  // Modbus
-  const int stallReg = 100;
-  const int toggleReg = 101;
-  const int idReg = 102;
+  // Modbus register addresses
+  const uint8_t stallReg = 100;
+  const uint8_t toggleReg = 101;
+  const uint8_t idReg = 102;
+  const uint8_t ropeReg = 103;
+
   ModbusIP mb; // ModbusTCP object
 
   ulong stallChangeCounter = 0;
   ulong buttonPressCounter = 0;
+  ulong ropeSwitchCounter = 0;
 
   // default timing settings
   const int connectedStatusLedRate = 1000;   // Blink rate when connected (in milliseconds)
   const int disconnectedStatusLedRate = 100; // Blink rate when disconnected (in milliseconds)
+  const int ropeSwitchStatusLedRate = 25;    // Blink rate when disconnected (in milliseconds)
   int statusLedRate = disconnectedStatusLedRate;
   const int statusLedOnTime = 1000;
   const int stallLedOnTime = 1000;
@@ -32,8 +60,10 @@ private:
   const int minDelayBetweenStalls = 750;
   const int maxDelayBetweenID_StallChange = 3500;
   const int IDBeforeStallWaitTime = 4000;
-  const int checkInterval = 5;
-  const int timeBetweenButtonPress = 2000;
+  const byte modbusReadInterval = 20;
+  const byte modbusPullInterval = 20;
+  const byte checkInterval = 5;
+  const int timeBetweenButtonPress = 1000;
   const int LEDAltBlink = 500;
 
   // input pin assignments
@@ -74,8 +104,18 @@ private:
   ulong lastIDChange = 0;
   ulong lastSimStallChange = 0;
   ulong lastModbusTask = 0;
-
+  ulong lastModbusRead = 0;
+  ulong lastModbusPull = 0;
 #pragma endregion variables
+
+#pragma region class methods
+  // uint16_t cbRope(TRegister *reg, uint16_t val);
+  // bool cbConn(IPAddress ip);
+  void activateRopeSwitch();
+  bool simulateStallChange(int sec);
+  void writeRegister(uint16_t reg, uint16_t value);
+#pragma endregion class methods
+
 public:
   void setup()
   {
@@ -102,63 +142,69 @@ public:
   void connected()
   {
     parlorConnected = 1;
-    mb.connect(remote); // Try to connect if no connection
+    mb.onConnect(cbConn); // Add callback on connection event
+    mb.connect(remote);   // Try to connect if no connection
     mb.client();
-  }
-
-  // simulate stall change with speed of +-1 of supplied value
-  bool simulateStallChange(int sec)
-  {
-    float variation = .1 * random(-10, 10);
-    int speed = (sec + variation) * 1000;
-
-    // DEBUG_PRINT("Var:");
-    // DEBUG_PRINTLN(variation);
-    // DEBUG_PRINT("Speed:");
-    // DEBUG_PRINTLN(speed);
-    if (millis() - lastSimStallChange > speed)
-    {
-      lastSimStallChange = millis();
-      return true;
-    }
-    else
-    {
-      return false;
-    }
-  }
-
-  void writeRegister(uint16_t reg, uint16_t value)
-  {
-    if (mb.isConnected(remote))
-    { // Check if connection to Modbus Slave is established
-      mb.writeHreg(remote, reg, value);
-      Serial.println("Completed Write");
-    }
-    else
-    {
-      Serial.println("No Connection");
-      mb.connect(remote); // Try to connect if no connection
-    }
+    mb.addHreg(ropeReg, 0, 1);
+    mb.onSetHreg(ropeReg, cbRope); // Add callback on Coil LED_COIL value set
   }
 
   void loop()
   {
 
-    if (millis() - lastModbusTask > 10)
+    if (millis() - lastModbusTask > modbusReadInterval)
     {
       mb.task(); // Common local Modbus task
+      lastModbusTask = millis();
+    }
+
+    if (millis() - lastModbusPull > modbusPullInterval)
+    {
+      if (mb.isConnected(remote))
+      {                                        // Check if connection to Modbus Slave is established
+        mb.pullHreg(remote, ropeReg, ropeReg); // Initiate Read Coil from Modbus Slave
+      }
+      else
+      {
+        mb.connect(remote); // Try to connect if no connection
+      }
+      lastModbusPull = millis();
+    }
+
+    // // Modbus read registers for changes
+    // if (millis() - lastModbusRead > modbusReadInterval)
+    // {
+    //   uint16_t lastRopeSwitchCount = mb.Hreg(ropeReg);
+    //   if (lastRopeSwitchCount != ropeSwitchCounter)
+    //   {
+    //     digitalWrite(ropeTrigLedPin, HIGH);
+    //     digitalWrite(relayPin, HIGH);
+
+    //     ropeTriggered = 1;
+    //     RSTriggerTime = millis();
+
+    //     Serial.println("Rope Switch On");
+    //   }
+
+    //   ropeSwitchCounter = lastRopeSwitchCount;
+    //   lastModbusRead = millis();
+    // }
+
+    if (ropeSwitch)
+    {
+      activateRopeSwitch();
     }
 
     // run every x millis (default: 5)
     if (millis() - lastInputRead > checkInterval)
     {
-
+#ifdef SIMULATE
+      // simulate stall change with speed of +-1 of supplied value
+      stallChange = simulateStallChange(10);
+#else
       // check for stall change
       stallChange = digitalRead(stallChangePin);
-
-      // simulate stall change with speed of +-1 of supplied value
-      // stallChange = simulateStallChange(10);
-
+#endif
       if (stallChange == HIGH && millis() - lastStallChange > minDelayBetweenStalls)
       {
         Serial.println("Stall Change");
@@ -268,10 +314,21 @@ public:
       ropeTriggered = 0;
       digitalWrite(ropeTrigLedPin, LOW);
       digitalWrite(relayPin, LOW);
+      Serial.println("Rope Switch Off");
     }
 
-    // set blink rate
-    statusLedRate = parlorConnected ? connectedStatusLedRate : disconnectedStatusLedRate;
+    if (ropeTriggered)
+    {
+      statusLedRate = ropeSwitchStatusLedRate;
+    }
+    else if (parlorConnected)
+    {
+      statusLedRate = connectedStatusLedRate;
+    }
+    else
+    {
+      statusLedRate = disconnectedStatusLedRate;
+    }
 
     // blink status LED
     if (enableStatusLED == 1 && millis() - lastStatusLEDBlink > statusLedRate)
@@ -282,3 +339,68 @@ public:
     }
   }
 };
+
+// // Callback function for write (set) Coil. Returns value to store.
+// uint16_t StallChangeMon::cbRope(TRegister *reg, uint16_t val)
+// {
+//   digitalWrite(ropeTrigLedPin, HIGH);
+//   digitalWrite(relayPin, HIGH);
+
+//   ropeTriggered = 1;
+//   RSTriggerTime = millis();
+
+//   Serial.println("Rope Switch On");
+//   return val;
+// }
+
+// // Callback function for client connect. Returns true to allow connection.
+// bool StallChangeMon::cbConn(IPAddress ip)
+// {
+//   Serial.println(ip);
+//   return true;
+// }
+void StallChangeMon::activateRopeSwitch()
+{
+  digitalWrite(ropeTrigLedPin, HIGH);
+  digitalWrite(relayPin, HIGH);
+
+  ropeTriggered = 1;
+  ropeSwitch = 0;
+  RSTriggerTime = millis();
+
+  Serial.println("Rope Switch On");
+}
+void StallChangeMon::writeRegister(uint16_t reg, uint16_t value)
+{
+  if (mb.isConnected(remote))
+  { // Check if connection to Modbus Slave is established
+    mb.writeHreg(remote, reg, value);
+    Serial.println("Completed Write");
+  }
+  else
+  {
+    Serial.println("No Connection");
+    mb.connect(remote); // Try to connect if no connection
+  }
+}
+
+// simulate stall change with speed of +-1 of supplied value
+bool StallChangeMon::simulateStallChange(int sec)
+{
+  float variation = .1 * random(-10, 10);
+  int speed = (sec + variation) * 1000;
+
+  // DEBUG_PRINT("Var:");
+  // DEBUG_PRINTLN(variation);
+  // DEBUG_PRINT("Speed:");
+  // DEBUG_PRINTLN(speed);
+  if (millis() - lastSimStallChange > speed)
+  {
+    lastSimStallChange = millis();
+    return true;
+  }
+  else
+  {
+    return false;
+  }
+}

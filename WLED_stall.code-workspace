@@ -1,0 +1,15 @@
+{
+	"folders": [
+		{
+			"path": "."
+		}
+	],
+	"settings": {
+		"files.associations": {
+			"vector": "cpp",
+			"new": "cpp",
+			"random": "cpp",
+			"functional": "cpp"
+		}
+	}
+}
