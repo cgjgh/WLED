@@ -1,6 +1,6 @@
 #pragma once
 
- #define SIMULATE
+// #define SIMULATE
 
 #include "wled.h"
 #include <ModbusIP_ESP8266.h>
