@@ -5,7 +5,7 @@
  */
 
 #ifdef WLED_ENABLE_MQTT
-#define MQTT_KEEP_ALIVE_TIME 60    // contact the MQTT broker every 60 seconds
+#define MQTT_KEEP_ALIVE_TIME 30    // contact the MQTT broker every 60 seconds
 
 void callback(char* topic, byte* payload, unsigned int length) {
   Serial.print("Message arrived [");

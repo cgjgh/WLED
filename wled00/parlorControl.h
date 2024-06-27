@@ -128,6 +128,8 @@ private:
   const int minDelayBetweenStalls = 750;
   const int parlorStopFailureDelay = 750;
   const int exitFWDSafetyDelay = 750;
+  const ulong checkCIPInterval = 1200000;
+  bool CIPUpdated = false;
 
   // stall vars
   const byte initialStall = 27;
@@ -225,8 +227,15 @@ private:
   int totalSafetySwitchTriggers = 0;
 
   // Modbus change tracking
-  ulong stallCounter = 0;
-  ulong toggleCounter = 0;
+  uint16_t stallCounter = 0;
+  uint16_t toggleCounter = 0;
+  uint16_t ropeSwitchCounter = 0;
+
+  // Modbus register addresses
+  uint8_t stallReg = 100;
+  uint8_t toggleReg = 101;
+  uint8_t idReg = 102;
+  uint8_t ropeReg = 103;
 
   // misc
   bool speedMeasured = 0;
@@ -257,8 +266,6 @@ private:
 
   // any private methods should go here (non-inline method should be defined out of class)
   void publishMqtt(const char *state, const char *topic, bool retain = false); // example for publishing MQTT message
-  bool onMqttMessage(char *topic, char *payload);
-  void onMqttConnect(bool sessionPresent);
   void setLEDRange(Light light, RgbColor color);
   void setLightColor(Light light, RgbColor color);
   void hsvToRgb(byte h, byte s, byte v, byte &r, byte &g, byte &b);
@@ -270,6 +277,7 @@ private:
   void stall_Change();
   void resetStats();
   void setMode(AutoMode mode);
+  void setGroup(byte group);
 
 public:
   /**
@@ -281,6 +289,10 @@ public:
    * Get usermod enabled/disabled state
    */
   inline bool isEnabled() { return enabled; }
+
+  // externally accessible methods
+  bool onMqttMessage(char *topic, char *payload);
+  void onMqttConnect(bool sessionPresent);
 
   /*
    * setup() is called once at boot. WiFi is not yet connected at this point.
@@ -327,14 +339,17 @@ public:
     Serial.print("AP IP address: ");
     Serial.println(myIP);
     mb.server(); // Start Modbus IP
-    mb.addHreg(100, 0, 1);
-    mb.addHreg(101, 0, 1);
+    mb.addHreg(stallReg, 0, 1);
+    mb.addHreg(toggleReg, 0, 1);
+    mb.addHreg(idReg, 0, 1);
+    mb.addHreg(ropeReg, 0, 1);
     DEBUG_PRINTLN("--------------------------------------------------------------------------------");
     DEBUG_PRINTLN("--------------------------------------------------------------------------------");
     DEBUG_PRINTLN("--------------------------------------------------------------------------------");
     DEBUG_PRINTLN("--------------------------------------------------------------------------------");
     DEBUG_PRINTLN("Rebooted/connected");
 
+    
   }
 
   void loop()
@@ -354,8 +369,8 @@ public:
     // Modbus read registers for changes
     if (millis() - lastModbusRead > modbusReadInterval)
     {
-      uint16_t lastStallCount = mb.Hreg(100);
-      uint16_t lastToggleCount = mb.Hreg(101);
+      uint16_t lastStallCount = mb.Hreg(stallReg);
+      uint16_t lastToggleCount = mb.Hreg(toggleReg);
       if (lastStallCount != stallCounter)
       {
         stall_Change();
@@ -503,7 +518,8 @@ public:
       else
       {
         completed = 1;
-        groupsDone = 0;
+        setGroup(0);
+        setMode(off);
 
         setLightColor(autoStop, red);
 
@@ -668,7 +684,6 @@ public:
         {
           setMode(prep);
           completed = 0;
-          publishMqtt("", "/get/cip", true);
         }
 
         if (currentMode == prep && groupsDone == 0 && currentStall == CIPStall)
@@ -721,7 +736,7 @@ public:
 
                 if (conseqSkippedStalls == (stallsBetweenGroup))
                 {
-                  groupsDone += 1;
+                  setGroup(groupsDone + 1);
                 }
 
                 if (conseqSkippedStalls == (stallsBetweenGroup + 1))
@@ -737,7 +752,7 @@ public:
                   {
                     newGroup = 0;
                     completed = 1;
-                    groupsDone = 0;
+                    setGroup(0);
                     setMode(washCIP);
                     setLightColor(stall, orange);
                     setRelay(parlor, 0);
@@ -1127,6 +1142,7 @@ bool ParlorControl::onMqttMessage(char *topic, char *payload)
     {
       CIPStall = atoi(payload);
       publishMqtt(payload, "/stat/cip", true); // Confirm success
+      CIPUpdated = true;
     }
   }
   else if (strcmp(topic, "/cmnd/group") == 0)
@@ -1166,7 +1182,15 @@ bool ParlorControl::onMqttMessage(char *topic, char *payload)
   }
   else if (strcmp(topic, "/cmnd/ropeswitch") == 0)
   {
-    publishMqtt("1", "/stat/ropeswitch", true);
+    ropeSwitchCounter++;
+    if (ropeSwitchCounter > 1000)
+    {
+      ropeSwitchCounter = 0;
+    }
+    char ropeStr[5];
+    snprintf(ropeStr, sizeof(ropeStr), "%d", ropeSwitchCounter);
+    publishMqtt(ropeStr, "/stat/ropeswitch", true);
+    mb.Hreg(ropeReg, ropeSwitchCounter);
   }
   else if (strcmp(topic, "/cmnd/uptime") == 0)
   {
@@ -1474,10 +1498,10 @@ void ParlorControl::getMedianSpeed()
     timeToStallCenterPos = maxOffsetMS;
   }
 
-  DEBUG_PRINT("Parlor Speed=");
-  DEBUG_PRINTLN(parlorSpeed);
-  DEBUG_PRINT("Time To Stall Center Position=");
-  DEBUG_PRINTLN(timeToStallCenterPos);
+  // DEBUG_PRINT("Parlor Speed=");
+  // DEBUG_PRINTLN(parlorSpeed);
+  // DEBUG_PRINT("Time To Stall Center Position=");
+  // DEBUG_PRINTLN(timeToStallCenterPos);
   if (speedLEDEnabled)
   {
     setLightColor(spare, generateSpeedColor(parlorSpeed));
@@ -1496,7 +1520,8 @@ void ParlorControl::getMedianSpeed()
 #pragma region Stall Functions
 void ParlorControl::increment_stall()
 {
-  currentStall += 1;
+  currentStall++;
+
   if (currentStall == 51)
   {
     currentStall = 1;
@@ -1514,6 +1539,15 @@ void ParlorControl::stall_Change()
     lastStatusLEDBlink = millis();
     statusLedState = 1;
   }
+  if (millis() - lastStallChange > checkCIPInterval)
+  {
+    CIPUpdated = false;
+  }
+  if (!CIPUpdated)
+  {
+    publishMqtt("", "/get/cip", true);
+  }
+
   speedMeasured = 0;
   DEBUG_PRINTLN("Stall Change");
 }
@@ -1536,7 +1570,7 @@ void ParlorControl::resetStats()
     avgTimePerStall = 0;
     startTime = time_t(0);
     endTime = time_t(0);
-    groupsDone = 0;
+    setGroup(0);
     completed = 1;
     statsReset = 1;
   }
@@ -1547,13 +1581,28 @@ void ParlorControl::setMode(AutoMode mode)
 
   AutoMode oldMode = currentMode;
   currentMode = mode;
-  char modeStr[3];
-  snprintf(modeStr, sizeof(modeStr), "%d", currentMode);
+
   if (oldMode != currentMode)
   {
   DEBUG_PRINTLN("Setting Mode");
 
       publishMqtt(modeStr, "/stat/mode", true);
+    char modeStr[3];
+    snprintf(modeStr, sizeof(modeStr), "%d", currentMode);
+    publishMqtt(modeStr, "/stat/mode", true);
+  }
+}
+
+void ParlorControl::setGroup(byte group)
+{
+  byte oldGroup = groupsDone;
+  groupsDone = group;
+
+  if (oldGroup != groupsDone)
+  {
+    char groupStr[3];
+    snprintf(groupStr, sizeof(groupStr), "%d", groupsDone);
+    publishMqtt(groupStr, "/stat/group", true);
   }
 }
 
