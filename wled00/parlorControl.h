@@ -1584,9 +1584,7 @@ void ParlorControl::setMode(AutoMode mode)
 
   if (oldMode != currentMode)
   {
-  DEBUG_PRINTLN("Setting Mode");
-
-      publishMqtt(modeStr, "/stat/mode", true);
+    DEBUG_PRINTLN("Setting Mode");
     char modeStr[3];
     snprintf(modeStr, sizeof(modeStr), "%d", currentMode);
     publishMqtt(modeStr, "/stat/mode", true);
