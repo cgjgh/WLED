@@ -250,7 +250,6 @@ private:
 
   bool enabled = true;
   bool initDone = false;
-  unsigned long lastTime = 0;
 
   // string that are used multiple time (this will save some flash memory)
   static const char _name[];
@@ -330,6 +329,12 @@ public:
     mb.server(); // Start Modbus IP
     mb.addHreg(100, 0, 1);
     mb.addHreg(101, 0, 1);
+    DEBUG_PRINTLN("--------------------------------------------------------------------------------");
+    DEBUG_PRINTLN("--------------------------------------------------------------------------------");
+    DEBUG_PRINTLN("--------------------------------------------------------------------------------");
+    DEBUG_PRINTLN("--------------------------------------------------------------------------------");
+    DEBUG_PRINTLN("Rebooted/connected");
+
   }
 
   void loop()
@@ -690,7 +695,7 @@ public:
           }
         }
 
-        // stall is empty onstall change
+        // stall is empty on stall change
         else
         {
 
@@ -798,11 +803,6 @@ public:
           setLightColor(stall, black);
         }
       }
-    }
-
-    if (millis() - lastTime > 5000)
-    {
-      lastTime = millis();
     }
 
     byte hr = hour(localTime);
@@ -1206,12 +1206,14 @@ void ParlorControl::publishMqtt(const char *state, const char *topic, bool retai
   // Check if MQTT Connected, otherwise it will crash the 8266
   if (WLED_MQTT_CONNECTED)
   {
-
     char subuf[64];
     strcpy(subuf, mqttDeviceTopic);
     // Use the topic argument to create a custom topic
     strcat(subuf, topic);
+    DEBUG_PRINTLN("MQTT Publishing: ");
+    DEBUG_PRINTLN(topic);
     mqtt->publish(subuf, 0, retain, state);
+    DEBUG_PRINTLN("MQTT Published ");
   }
 #endif
 }
@@ -1290,6 +1292,12 @@ void ParlorControl::setLightColor(Light light, RgbColor color)
 
 void ParlorControl::hsvToRgb(byte h, byte s, byte v, byte &r, byte &g, byte &b)
 {
+DEBUG_PRINTLN("hsvToRgb");
+  DEBUG_PRINT(h);
+  DEBUG_PRINT(",");
+  DEBUG_PRINT(s);
+  DEBUG_PRINT(",");
+  DEBUG_PRINTLN(v);
   byte i = h / 43;                                    // 43 = 256 / 6 (number of color sextants)
   byte f = (h % 43) * 6;                              // 6 = 256 / 42 (width of each sextant)
   byte p = (v * (255 - s)) >> 8;                      // Equivalent to (v * (255 - s)) / 256
@@ -1333,6 +1341,7 @@ void ParlorControl::hsvToRgb(byte h, byte s, byte v, byte &r, byte &g, byte &b)
 
 RgbColor ParlorControl::generateSpeedColor(float inputValue)
 {
+  DEBUG_PRINTLN("Generating Speed Color");
   int hueValue;
   if (inputValue < speedSetpoint - errorMargin)
   {
@@ -1366,6 +1375,7 @@ RgbColor ParlorControl::generateSpeedColor(float inputValue)
   byte blue;
 
   hsvToRgb(hueValue, 255, 255, red, green, blue);
+  DEBUG_PRINTLN("Done generating Speed Color");
 
   return RgbColor(red, green, blue);
 }
@@ -1433,6 +1443,7 @@ void ParlorControl::setRelay(Relays relay, bool state)
 #pragma region Speed Control
 float ParlorControl::round_to_dp(float in_value, int decimal_place)
 {
+  DEBUG_PRINTLN("Rounding to DP");
   float multiplier = powf(10.0f, decimal_place);
   in_value = roundf(in_value * multiplier) / multiplier;
   return in_value;
@@ -1440,6 +1451,8 @@ float ParlorControl::round_to_dp(float in_value, int decimal_place)
 
 void ParlorControl::getMedianSpeed()
 {
+  DEBUG_PRINTLN("Getting Median Speed");
+
   float y = (float(millis()) - float(lastStallChange)) / 1000.00;
   // float x = round_to_dp(y, 2);
   lastStallChange = millis();
@@ -1475,6 +1488,8 @@ void ParlorControl::getMedianSpeed()
   snprintf(speedStr, sizeof(speedStr), "%.2f", parlorSpeed);
   publishMqtt(speedStr, "/stat/speed", true);
   speedMeasured = 1;
+  DEBUG_PRINTLN("Done Getting Median Speed");
+
 }
 #pragma endregion Speed Control
 
@@ -1529,12 +1544,15 @@ void ParlorControl::resetStats()
 
 void ParlorControl::setMode(AutoMode mode)
 {
+
   AutoMode oldMode = currentMode;
   currentMode = mode;
   char modeStr[3];
   snprintf(modeStr, sizeof(modeStr), "%d", currentMode);
   if (oldMode != currentMode)
   {
+  DEBUG_PRINTLN("Setting Mode");
+
       publishMqtt(modeStr, "/stat/mode", true);
   }
 }
