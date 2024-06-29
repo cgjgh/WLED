@@ -53,7 +53,53 @@ RgbColor spareLedState = black;
 
 #pragma endregion
 
-// class name. Use something descriptive and leave the ": public Usermod" part :)
+#pragma region Modbus Callbacks
+
+bool stallRegChanged = 0;
+bool toggleRegChanged = 0;
+uint16_t cbStallChange(TRegister *reg, uint16_t val)
+{
+  // Check if reg state is going to be changed
+  if (reg->value != val)
+  {
+    Serial.print("Set reg: ");
+    Serial.println(val);
+    stallRegChanged = 1;
+    if (val > (reg->value + 1))
+    {
+      DEBUG_PRINTLN("Stall skip");
+      DEBUG_PRINTLN("New:");
+      DEBUG_PRINT(val);
+      DEBUG_PRINTLN("Old:");
+      DEBUG_PRINT(reg->value);
+    }
+  }
+  //stallRegChanged = 1;
+  return val;
+}
+
+uint16_t cbToggleChange(TRegister *reg, uint16_t val)
+{
+  // Check if reg state is going to be changed
+  if (reg->value != val)
+  {
+    Serial.print("Set reg: ");
+    Serial.println(val);
+    toggleRegChanged = 1;
+    if (val > (reg->value + 1))
+    {
+      DEBUG_PRINTLN("Toggle skip");
+      DEBUG_PRINTLN("New:");
+      DEBUG_PRINT(val);
+      DEBUG_PRINTLN("Old:");
+      DEBUG_PRINT(reg->value);
+    }
+  }
+  return val;
+}
+
+#pragma endregion Modbus Callbacks
+
 class ParlorControl : public Usermod
 {
 
@@ -141,6 +187,10 @@ private:
   float errorMargin = 1.2;
   bool stallChangeStatusLED = 0;
   bool speedLEDEnabled = 1;
+
+  // max/min sampled speed in sec per stall
+  const float maxSecPerStall = 25.0;
+  const float minSecPerStall = 4.0;
 
   // millisecond offset to center stall
   const int maxOffsetMS = 5000;
@@ -343,13 +393,16 @@ public:
     mb.addHreg(toggleReg, 0, 1);
     mb.addHreg(idReg, 0, 1);
     mb.addHreg(ropeReg, 0, 1);
+    mb.onSetHreg(stallReg, cbStallChange); // Add callback on Reg Stall value set
+    mb.onSetHreg(toggleReg, cbToggleChange); // Add callback on Reg Stall value set
+
     DEBUG_PRINTLN("--------------------------------------------------------------------------------");
     DEBUG_PRINTLN("--------------------------------------------------------------------------------");
     DEBUG_PRINTLN("--------------------------------------------------------------------------------");
     DEBUG_PRINTLN("--------------------------------------------------------------------------------");
     DEBUG_PRINTLN("Rebooted/connected");
 
-    
+
   }
 
   void loop()
@@ -366,32 +419,23 @@ public:
       mb.task();
     }
 
-    // Modbus read registers for changes
-    if (millis() - lastModbusRead > modbusReadInterval)
+    if (stallRegChanged)
     {
-      uint16_t lastStallCount = mb.Hreg(stallReg);
-      uint16_t lastToggleCount = mb.Hreg(toggleReg);
-      if (lastStallCount != stallCounter)
+      stallRegChanged = 0;
+      stall_Change();
+    }
+
+    if (toggleRegChanged)
+    {
+      toggleRegChanged = 0;
+      if (autoStopEnabled)
       {
-        stall_Change();
+        autoStopEnabled = 0;
       }
-
-      if (lastToggleCount != toggleCounter)
+      else
       {
-        if (autoStopEnabled)
-        {
-          autoStopEnabled = 0;
-        }
-        else
-        {
-          autoStopEnabled = 1;
-        }
+        autoStopEnabled = 1;
       }
-
-      stallCounter = lastStallCount;
-      toggleCounter = lastToggleCount;
-
-      lastModbusRead = millis();
     }
 
     if (waterChaserMode == chaserOff)
@@ -779,6 +823,8 @@ public:
             setRelay(parlor, 0);
           }
         }
+        DEBUG_PRINT(F("Current Stall: "));
+        DEBUG_PRINTLN(currentStall);
         stallChange = 0;
         char stallStr[3];
         snprintf(stallStr, sizeof(stallStr), "%d", currentStall);
@@ -1480,6 +1526,11 @@ void ParlorControl::getMedianSpeed()
   float y = (float(millis()) - float(lastStallChange)) / 1000.00;
   // float x = round_to_dp(y, 2);
   lastStallChange = millis();
+  if (y > maxSecPerStall)
+  {
+    y = maxSecPerStall;
+  }
+
   speedSamples.add(y);
   DEBUG_PRINT("Current Speed=");
   DEBUG_PRINTLN(y);
