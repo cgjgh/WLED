@@ -12,8 +12,8 @@ uint16_t cbRope(TRegister *reg, uint16_t val)
   // Check if Coil state is going to be changed
   if (reg->value != val && initRope != 0)
   {
-    Serial.print("Set reg: ");
-    Serial.println(val);
+    // Serial.print("Set reg: ");
+    // Serial.println(val);
     ropeSwitch = 1;
   }
   initRope = 1;
@@ -44,14 +44,16 @@ private:
 
   ModbusIP mb; // ModbusTCP object
 
-  ulong stallChangeCounter = 0;
-  ulong buttonPressCounter = 0;
-  ulong ropeSwitchCounter = 0;
+  unsigned long stallChangeCounter = 0;
+  unsigned long buttonPressCounter = 0;
+  unsigned long ropeSwitchCounter = 0;
 
   // default timing settings
   const int connectedStatusLedRate = 1000;   // Blink rate when connected (in milliseconds)
-  const int disconnectedStatusLedRate = 100; // Blink rate when disconnected (in milliseconds)
-  const int ropeSwitchStatusLedRate = 25;    // Blink rate when disconnected (in milliseconds)
+  const byte disconnectedStatusLedRate = 100; // Blink rate when disconnected (in milliseconds)
+  const byte ropeSwitchStatusLedRate = 25;    // Blink rate when rope switch is active (in milliseconds)
+  const byte stallChangeStatusLedRate = 15;   // Blink rate on stall change (in milliseconds)
+  const int stallChangeShowStatusTime = 500; // Blink rate on stall change (in milliseconds)
   int statusLedRate = disconnectedStatusLedRate;
   const int statusLedOnTime = 1000;
   const int stallLedOnTime = 1000;
@@ -83,6 +85,7 @@ private:
   bool IDLedOn = 0;
   bool NoIDLedOn = 0;
   bool autoLedOn = 0;
+  bool stallChangedStatus = 0;
 
   // states
   bool ropeTriggered = 0;
@@ -94,18 +97,18 @@ private:
   bool NoID_Mode = 1;
 
   // time of last...
-  ulong lastStallChange = 0;
-  ulong lastInputRead = 0;
-  ulong lastNoID = 0;
-  ulong RSTriggerTime = 0;
-  ulong lastButtonPress = 0;
-  ulong lastLEDBlink = 0;
-  ulong lastStatusLEDBlink = 0;
-  ulong lastIDChange = 0;
-  ulong lastSimStallChange = 0;
-  ulong lastModbusTask = 0;
-  ulong lastModbusRead = 0;
-  ulong lastModbusPull = 0;
+  unsigned long lastStallChange = 0;
+  unsigned long lastInputRead = 0;
+  unsigned long lastNoID = 0;
+  unsigned long RSTriggerTime = 0;
+  unsigned long lastButtonPress = 0;
+  unsigned long lastLEDBlink = 0;
+  unsigned long lastStatusLEDBlink = 0;
+  unsigned long lastIDChange = 0;
+  unsigned long lastSimStallChange = 0;
+  unsigned long lastModbusTask = 0;
+  unsigned long lastModbusRead = 0;
+  unsigned long lastModbusPull = 0;
 #pragma endregion variables
 
 #pragma region class methods
@@ -220,7 +223,7 @@ public:
 
           writeRegister(stallReg, stallChangeCounter); // set stall led register to counter value
         }
-
+        stallChangedStatus = 1;
         lastStallChange = millis();
       }
       else if (StallLedOn == 1)
@@ -263,7 +266,9 @@ public:
         {
           buttonPressCounter++;
           if (buttonPressCounter > 1000)
+          {
             buttonPressCounter = 0;
+          }
           writeRegister(toggleReg, buttonPressCounter); // set toggle register to counter value
         }
 
@@ -293,20 +298,6 @@ public:
     {
       parlorConnected = 0;
     }
-    // if (enableStatusLED == 1 && millis() - lastStatusLEDBlink > statusLedOnTime)
-    // {
-    //   if (statusLEDState == 0)
-    //   {
-    //     digitalWrite(LED_BUILTIN, HIGH);
-    //     statusLEDState = 1;
-    //   }
-    //   else
-    //   {
-    //     digitalWrite(LED_BUILTIN, LOW);
-    //     statusLEDState = 0;
-    //   }
-    //   lastStatusLEDBlink = millis();
-    // }
 
     // turn off rope switch after set delay
     if (ropeTriggered == 1 && millis() - RSTriggerTime > ropeSwitchOnTime)
@@ -317,9 +308,19 @@ public:
       Serial.println("Rope Switch Off");
     }
 
+    if (millis() - lastStallChange > stallChangeShowStatusTime)
+    {
+      stallChangedStatus = 0;
+    }
+
+    // set status LED blink rate
     if (ropeTriggered)
     {
       statusLedRate = ropeSwitchStatusLedRate;
+    }
+    else if (stallChangedStatus)
+    {
+      statusLedRate = stallChangeStatusLedRate;
     }
     else if (parlorConnected)
     {
@@ -340,25 +341,6 @@ public:
   }
 };
 
-// // Callback function for write (set) Coil. Returns value to store.
-// uint16_t StallChangeMon::cbRope(TRegister *reg, uint16_t val)
-// {
-//   digitalWrite(ropeTrigLedPin, HIGH);
-//   digitalWrite(relayPin, HIGH);
-
-//   ropeTriggered = 1;
-//   RSTriggerTime = millis();
-
-//   Serial.println("Rope Switch On");
-//   return val;
-// }
-
-// // Callback function for client connect. Returns true to allow connection.
-// bool StallChangeMon::cbConn(IPAddress ip)
-// {
-//   Serial.println(ip);
-//   return true;
-// }
 void StallChangeMon::activateRopeSwitch()
 {
   digitalWrite(ropeTrigLedPin, HIGH);
