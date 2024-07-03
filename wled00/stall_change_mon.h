@@ -5,8 +5,10 @@
 #include "wled.h"
 #include <ModbusIP_ESP8266.h>
 
+// callbacks variables for use in usermod functions
 bool ropeSwitch = 0;
 bool initRope = 0;
+bool modbusDisconnected = 0;
 uint16_t cbRope(TRegister *reg, uint16_t val)
 {
   // Check if Coil state is going to be changed
@@ -24,6 +26,14 @@ uint16_t cbRope(TRegister *reg, uint16_t val)
 bool cbConn(IPAddress ip)
 {
   Serial.println(ip);
+  modbusDisconnected = 0;
+  return true;
+}
+
+bool cbDisConn(IPAddress ip)
+{
+  Serial.println(ip);
+  modbusDisconnected = 1;
   return true;
 }
 
@@ -49,11 +59,11 @@ private:
   unsigned long ropeSwitchCounter = 0;
 
   // default timing settings
-  const int connectedStatusLedRate = 1000;   // Blink rate when connected (in milliseconds)
+  const int connectedStatusLedRate = 1000;    // Blink rate when connected (in milliseconds)
   const byte disconnectedStatusLedRate = 100; // Blink rate when disconnected (in milliseconds)
   const byte ropeSwitchStatusLedRate = 25;    // Blink rate when rope switch is active (in milliseconds)
   const byte stallChangeStatusLedRate = 15;   // Blink rate on stall change (in milliseconds)
-  const int stallChangeShowStatusTime = 500; // Blink rate on stall change (in milliseconds)
+  const int stallChangeShowStatusTime = 500;  // Blink rate on stall change (in milliseconds)
   int statusLedRate = disconnectedStatusLedRate;
   const int statusLedOnTime = 1000;
   const int stallLedOnTime = 1000;
@@ -62,8 +72,9 @@ private:
   const int minDelayBetweenStalls = 750;
   const int maxDelayBetweenID_StallChange = 3500;
   const int IDBeforeStallWaitTime = 4000;
+  const int modbusConnectionRetryInterval = 1000;
   const byte modbusReadInterval = 20;
-  const byte modbusPullInterval = 20;
+  const byte modbusPullInterval = 200;
   const byte checkInterval = 5;
   const int timeBetweenButtonPress = 1000;
   const int LEDAltBlink = 500;
@@ -109,6 +120,7 @@ private:
   unsigned long lastModbusTask = 0;
   unsigned long lastModbusRead = 0;
   unsigned long lastModbusPull = 0;
+  unsigned long lastModbusConnectionAttempt = 0;
 #pragma endregion variables
 
 #pragma region class methods
@@ -146,6 +158,7 @@ public:
   {
     parlorConnected = 1;
     mb.onConnect(cbConn); // Add callback on connection event
+    mb.onDisconnect(cbDisConn); // Add callback on connection event
     mb.connect(remote);   // Try to connect if no connection
     mb.client();
     mb.addHreg(ropeReg, 0, 1);
@@ -166,32 +179,19 @@ public:
       if (mb.isConnected(remote))
       {                                        // Check if connection to Modbus Slave is established
         mb.pullHreg(remote, ropeReg, ropeReg); // Initiate Read Coil from Modbus Slave
+        lastModbusPull = millis();
       }
       else
       {
         mb.connect(remote); // Try to connect if no connection
       }
-      lastModbusPull = millis();
     }
 
-    // // Modbus read registers for changes
-    // if (millis() - lastModbusRead > modbusReadInterval)
-    // {
-    //   uint16_t lastRopeSwitchCount = mb.Hreg(ropeReg);
-    //   if (lastRopeSwitchCount != ropeSwitchCounter)
-    //   {
-    //     digitalWrite(ropeTrigLedPin, HIGH);
-    //     digitalWrite(relayPin, HIGH);
-
-    //     ropeTriggered = 1;
-    //     RSTriggerTime = millis();
-
-    //     Serial.println("Rope Switch On");
-    //   }
-
-    //   ropeSwitchCounter = lastRopeSwitchCount;
-    //   lastModbusRead = millis();
-    // }
+    if ( modbusDisconnected == 1 && millis() - lastModbusConnectionAttempt > modbusConnectionRetryInterval)
+    {
+      mb.connect(remote); // Try to connect if no connection
+      lastModbusConnectionAttempt = millis();
+    }
 
     if (ropeSwitch)
     {
@@ -354,8 +354,9 @@ void StallChangeMon::activateRopeSwitch()
 }
 void StallChangeMon::writeRegister(uint16_t reg, uint16_t value)
 {
+  // Check if connection to Modbus Slave is established
   if (mb.isConnected(remote))
-  { // Check if connection to Modbus Slave is established
+  {
     mb.writeHreg(remote, reg, value);
     Serial.println("Completed Write");
   }
