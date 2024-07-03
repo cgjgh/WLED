@@ -234,18 +234,18 @@ private:
   bool washRelayState = 0;
 
   // millis() time of last...
-  ulong lastStallChange = 0;
-  ulong lastLEDBlink = 0;
-  ulong lastStatusLEDBlink = 0;
-  ulong lastStallLEDBlink = 0;
-  ulong lastInputRead = 0;
-  ulong lastSpeedLEDSet = 0;
-  ulong lastCowFWDSafetySwitchNotTriggered = 0;
-  ulong lastParlorStopRelayTriggered = 0;
-  ulong lastFWDSafetyNotTrig = 0;
-  ulong lastFWDSafetyCheck = 0;
-  ulong lastModbusRead = 0;
-  ulong lastModbusTask = 0;
+  unsigned long lastStallChange = 0;
+  unsigned long lastLEDBlink = 0;
+  unsigned long lastStatusLEDBlink = 0;
+  unsigned long lastStallLEDBlink = 0;
+  unsigned long lastInputRead = 0;
+  unsigned long lastSpeedLEDSet = 0;
+  unsigned long lastCowFWDSafetySwitchNotTriggered = 0;
+  unsigned long lastParlorStopRelayTriggered = 0;
+  unsigned long lastFWDSafetyNotTrig = 0;
+  unsigned long lastFWDSafetyCheck = 0;
+  unsigned long lastModbusRead = 0;
+  unsigned long lastModbusTask = 0;
 
   // parlor vars
   bool stallChange = 0;
