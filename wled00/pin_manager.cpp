@@ -16,81 +16,81 @@ static void DebugPrintOwnerTag(PinOwner tag)
 /// Actual allocation/deallocation routines
 bool PinManagerClass::deallocatePin(byte gpio, PinOwner tag)
 {
-  if (gpio == 0xFF) return true;           // explicitly allow clients to free -1 as a no-op
-  if (!isPinOk(gpio, false)) return false; // but return false for any other invalid pin
+  // if (gpio == 0xFF) return true;           // explicitly allow clients to free -1 as a no-op
+  // if (!isPinOk(gpio, false)) return false; // but return false for any other invalid pin
 
-  // if a non-zero ownerTag, only allow de-allocation if the owner's tag is provided
-  if ((ownerTag[gpio] != PinOwner::None) && (ownerTag[gpio] != tag)) {
-    #ifdef WLED_DEBUG
-    DEBUG_PRINT(F("PIN DEALLOC: IO "));
-    DEBUG_PRINT(gpio);
-    DEBUG_PRINT(F(" allocated by "));
-    DebugPrintOwnerTag(ownerTag[gpio]);
-    DEBUG_PRINT(F(", but attempted de-allocation by "));
-    DebugPrintOwnerTag(tag);
-    #endif
-    return false;
-  }
+  // // if a non-zero ownerTag, only allow de-allocation if the owner's tag is provided
+  // if ((ownerTag[gpio] != PinOwner::None) && (ownerTag[gpio] != tag)) {
+  //   #ifdef WLED_DEBUG
+  //   DEBUG_PRINT(F("PIN DEALLOC: IO "));
+  //   DEBUG_PRINT(gpio);
+  //   DEBUG_PRINT(F(" allocated by "));
+  //   DebugPrintOwnerTag(ownerTag[gpio]);
+  //   DEBUG_PRINT(F(", but attempted de-allocation by "));
+  //   DebugPrintOwnerTag(tag);
+  //   #endif
+  //   return false;
+  // }
 
-  byte by = gpio >> 3;
-  byte bi = gpio - 8*by;
-  bitWrite(pinAlloc[by], bi, false);
-  ownerTag[gpio] = PinOwner::None;
+  // byte by = gpio >> 3;
+  // byte bi = gpio - 8*by;
+  // bitWrite(pinAlloc[by], bi, false);
+  // ownerTag[gpio] = PinOwner::None;
   return true;
 }
 
 // support function for deallocating multiple pins
 bool PinManagerClass::deallocateMultiplePins(const uint8_t *pinArray, byte arrayElementCount, PinOwner tag)
 {
-  bool shouldFail = false;
-  DEBUG_PRINTLN(F("MULTIPIN DEALLOC"));
-  // first verify the pins are OK and allocated by selected owner
-  for (int i = 0; i < arrayElementCount; i++) {
-    byte gpio = pinArray[i];
-    if (gpio == 0xFF) {
-      // explicit support for io -1 as a no-op (no allocation of pin),
-      // as this can greatly simplify configuration arrays
-      continue;
-    }
-    if (isPinAllocated(gpio, tag)) {
-      // if the current pin is allocated by selected owner it is possible to release it
-      continue;
-    }
-    #ifdef WLED_DEBUG
-    DEBUG_PRINT(F("PIN DEALLOC: IO "));
-    DEBUG_PRINT(gpio);
-    DEBUG_PRINT(F(" allocated by "));
-    DebugPrintOwnerTag(ownerTag[gpio]);
-    DEBUG_PRINT(F(", but attempted de-allocation by "));
-    DebugPrintOwnerTag(tag);
-    #endif
-    shouldFail = true;
-  }
-  if (shouldFail) {
-    return false; // no pins deallocated
-  }
-  if (tag==PinOwner::HW_I2C) {
-    if (i2cAllocCount && --i2cAllocCount>0) {
-      // no deallocation done until last owner releases pins
-      return true;
-    }
-  }
-  if (tag==PinOwner::HW_SPI) {
-    if (spiAllocCount && --spiAllocCount>0) {
-      // no deallocation done until last owner releases pins
-      return true;
-    }
-  }
-  for (int i = 0; i < arrayElementCount; i++) {
-    deallocatePin(pinArray[i], tag);
-  }
+  // bool shouldFail = false;
+  // DEBUG_PRINTLN(F("MULTIPIN DEALLOC"));
+  // // first verify the pins are OK and allocated by selected owner
+  // for (int i = 0; i < arrayElementCount; i++) {
+  //   byte gpio = pinArray[i];
+  //   if (gpio == 0xFF) {
+  //     // explicit support for io -1 as a no-op (no allocation of pin),
+  //     // as this can greatly simplify configuration arrays
+  //     continue;
+  //   }
+  //   if (isPinAllocated(gpio, tag)) {
+  //     // if the current pin is allocated by selected owner it is possible to release it
+  //     continue;
+  //   }
+  //   #ifdef WLED_DEBUG
+  //   DEBUG_PRINT(F("PIN DEALLOC: IO "));
+  //   DEBUG_PRINT(gpio);
+  //   DEBUG_PRINT(F(" allocated by "));
+  //   DebugPrintOwnerTag(ownerTag[gpio]);
+  //   DEBUG_PRINT(F(", but attempted de-allocation by "));
+  //   DebugPrintOwnerTag(tag);
+  //   #endif
+  //   shouldFail = true;
+  // }
+  // if (shouldFail) {
+  //   return false; // no pins deallocated
+  // }
+  // if (tag==PinOwner::HW_I2C) {
+  //   if (i2cAllocCount && --i2cAllocCount>0) {
+  //     // no deallocation done until last owner releases pins
+  //     return true;
+  //   }
+  // }
+  // if (tag==PinOwner::HW_SPI) {
+  //   if (spiAllocCount && --spiAllocCount>0) {
+  //     // no deallocation done until last owner releases pins
+  //     return true;
+  //   }
+  // }
+  // for (int i = 0; i < arrayElementCount; i++) {
+  //   deallocatePin(pinArray[i], tag);
+  // }
   return true;
 }
 
 bool PinManagerClass::deallocateMultiplePins(const managed_pin_type * mptArray, byte arrayElementCount, PinOwner tag)
 {
-  uint8_t pins[arrayElementCount];
-  for (int i=0; i<arrayElementCount; i++) pins[i] = mptArray[i].pin;
+  // uint8_t pins[arrayElementCount];
+  // for (int i=0; i<arrayElementCount; i++) pins[i] = mptArray[i].pin;
   return deallocateMultiplePins(pins, arrayElementCount, tag);
 }
 
@@ -211,12 +211,13 @@ bool PinManagerClass::allocatePin(byte gpio, bool output, PinOwner tag)
 // if tag is set to any other value, checks if that tag is the current owner of the pin.
 bool PinManagerClass::isPinAllocated(byte gpio, PinOwner tag)
 {
-  if (!isPinOk(gpio, false)) return true;
-  if ((tag != PinOwner::None) && (ownerTag[gpio] != tag)) return false;
-  if (gpio >= WLED_NUM_PINS) return false; // catch error case, to avoid array out-of-bounds access
-  byte by = gpio >> 3;
-  byte bi = gpio - (by<<3);
-  return bitRead(pinAlloc[by], bi);
+  // if (!isPinOk(gpio, false)) return true;
+  // if ((tag != PinOwner::None) && (ownerTag[gpio] != tag)) return false;
+  // if (gpio >= WLED_NUM_PINS) return false; // catch error case, to avoid array out-of-bounds access
+  // byte by = gpio >> 3;
+  // byte bi = gpio - (by<<3);
+  // return bitRead(pinAlloc[by], bi);
+  return true;
 }
 
 /* see https://docs.espressif.com/projects/esp-idf/en/latest/esp32s3/api-reference/peripherals/gpio.html
@@ -238,41 +239,42 @@ bool PinManagerClass::isPinAllocated(byte gpio, PinOwner tag)
 // Check if supplied GPIO is ok to use
 bool PinManagerClass::isPinOk(byte gpio, bool output)
 {
-#ifdef ESP32
-  if (digitalPinIsValid(gpio)) {
-  #if defined(CONFIG_IDF_TARGET_ESP32C3)
-    // strapping pins: 2, 8, & 9
-    if (gpio > 11 && gpio < 18) return false;     // 11-17 SPI FLASH
-    if (gpio > 17 && gpio < 20) return false;     // 18-19 USB-JTAG
-  #elif defined(CONFIG_IDF_TARGET_ESP32S3)
-    // 00 to 18 are for general use. Be careful about straping pins GPIO0 and GPIO3 - these may be pulled-up or pulled-down on your board.
-    if (gpio > 18 && gpio < 21) return false;     // 19 + 20 = USB-JTAG. Not recommended for other uses.
-    if (gpio > 21 && gpio < 33) return false;     // 22 to 32: not connected + SPI FLASH
-    //if (gpio > 32 && gpio < 38) return false;     // 33 to 37: not available if using _octal_ SPI Flash or _octal_ PSRAM
-    // 38 to 48 are for general use. Be careful about straping pins GPIO45 and GPIO46 - these may be pull-up or pulled-down on your board.
-  #elif defined(CONFIG_IDF_TARGET_ESP32S2)
-    // strapping pins: 0, 45 & 46
-    if (gpio > 21 && gpio < 33) return false;     // 22 to 32: not connected + SPI FLASH
-    // JTAG: GPIO39-42 are usually used for inline debugging
-    // GPIO46 is input only and pulled down
-  #else
-    if (gpio > 5 && gpio < 12) return false;      //SPI flash pins
-  #endif
-    if (output) return digitalPinCanOutput(gpio);
-    else        return true;
-  }
-#else
-  if (gpio <  6) return true;
-  if (gpio < 12) return false; //SPI flash pins
-  if (gpio < 17) return true;
-#endif
+// #ifdef ESP32
+//   if (digitalPinIsValid(gpio)) {
+//   #if defined(CONFIG_IDF_TARGET_ESP32C3)
+//     // strapping pins: 2, 8, & 9
+//     if (gpio > 11 && gpio < 18) return false;     // 11-17 SPI FLASH
+//     if (gpio > 17 && gpio < 20) return false;     // 18-19 USB-JTAG
+//   #elif defined(CONFIG_IDF_TARGET_ESP32S3)
+//     // 00 to 18 are for general use. Be careful about straping pins GPIO0 and GPIO3 - these may be pulled-up or pulled-down on your board.
+//     if (gpio > 18 && gpio < 21) return false;     // 19 + 20 = USB-JTAG. Not recommended for other uses.
+//     if (gpio > 21 && gpio < 33) return false;     // 22 to 32: not connected + SPI FLASH
+//     //if (gpio > 32 && gpio < 38) return false;     // 33 to 37: not available if using _octal_ SPI Flash or _octal_ PSRAM
+//     // 38 to 48 are for general use. Be careful about straping pins GPIO45 and GPIO46 - these may be pull-up or pulled-down on your board.
+//   #elif defined(CONFIG_IDF_TARGET_ESP32S2)
+//     // strapping pins: 0, 45 & 46
+//     if (gpio > 21 && gpio < 33) return false;     // 22 to 32: not connected + SPI FLASH
+//     // JTAG: GPIO39-42 are usually used for inline debugging
+//     // GPIO46 is input only and pulled down
+//   #else
+//     if (gpio > 5 && gpio < 12) return false;      //SPI flash pins
+//   #endif
+//     if (output) return digitalPinCanOutput(gpio);
+//     else        return true;
+//   }
+// #else
+//   if (gpio <  6) return true;
+//   if (gpio < 12) return false; //SPI flash pins
+//   if (gpio < 17) return true;
+// #endif
   return false;
 }
 
 PinOwner PinManagerClass::getPinOwner(byte gpio) {
-  if (gpio >= WLED_NUM_PINS) return PinOwner::None; // catch error case, to avoid array out-of-bounds access
-  if (!isPinOk(gpio, false)) return PinOwner::None;
-  return ownerTag[gpio];
+  // if (gpio >= WLED_NUM_PINS) return PinOwner::None; // catch error case, to avoid array out-of-bounds access
+  // if (!isPinOk(gpio, false)) return PinOwner::None;
+  // return ownerTag[gpio];
+  return PinOwner::None;
 }
 
 #ifdef ARDUINO_ARCH_ESP32
@@ -313,12 +315,12 @@ byte PinManagerClass::allocateLedc(byte channels)
 
 void PinManagerClass::deallocateLedc(byte pos, byte channels)
 {
-  for (byte j = pos; j < pos + channels; j++) {
-    if (j > MAX_LED_CHANNELS) return;
-    byte by = j >> 3;
-    byte bi = j - 8*by;
-    bitWrite(ledcAlloc[by], bi, false);
-  }
+  // for (byte j = pos; j < pos + channels; j++) {
+  //   if (j > MAX_LED_CHANNELS) return;
+  //   byte by = j >> 3;
+  //   byte bi = j - 8*by;
+  //   bitWrite(ledcAlloc[by], bi, false);
+  // }
 }
 #endif
 
