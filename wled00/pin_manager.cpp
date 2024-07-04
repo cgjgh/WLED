@@ -89,8 +89,8 @@ bool PinManagerClass::deallocateMultiplePins(const uint8_t *pinArray, byte array
 
 bool PinManagerClass::deallocateMultiplePins(const managed_pin_type * mptArray, byte arrayElementCount, PinOwner tag)
 {
-  // uint8_t pins[arrayElementCount];
-  // for (int i=0; i<arrayElementCount; i++) pins[i] = mptArray[i].pin;
+  uint8_t pins[arrayElementCount];
+  for (int i=0; i<arrayElementCount; i++) pins[i] = mptArray[i].pin;
   return deallocateMultiplePins(pins, arrayElementCount, tag);
 }
 
