@@ -24,6 +24,6 @@ void updateBaudRate(uint32_t rate){
 
 void handleSerial()
 {
-  if (pinManager.isPinAllocated(hardwareRX)) return;
+  //if (pinManager.isPinAllocated(hardwareRX)) return;
   if (!Serial) return;              // arduino docs: `if (Serial)` indicates whether or not the USB CDC serial connection is open. For all non-USB CDC ports, this will always return true
 }
