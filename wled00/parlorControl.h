@@ -57,12 +57,15 @@ RgbColor spareLedState = black;
 
 bool stallRegChanged = 0;
 bool toggleRegChanged = 0;
+
+uint16_t stallChangeSkips = 0;
+uint16_t toggleChangeSkips = 0;
+
 uint16_t cbStallChange(TRegister *reg, uint16_t val)
 {
   // Check if reg state is going to be changed
   if (reg->value != val)
   {
-    DEBUG_PRINT(PSTR("Set reg: "));
     Serial.println(val);
     stallRegChanged = 1;
     if (val > (reg->value + 1))
@@ -72,6 +75,7 @@ uint16_t cbStallChange(TRegister *reg, uint16_t val)
       DEBUG_PRINT(val);
       DEBUG_PRINTLN(PSTR("Old:"));
       DEBUG_PRINT(reg->value);
+      stallChangeSkips++;
     }
   }
   // stallRegChanged = 1;
@@ -83,7 +87,6 @@ uint16_t cbToggleChange(TRegister *reg, uint16_t val)
   // Check if reg state is going to be changed
   if (reg->value != val)
   {
-    DEBUG_PRINT(PSTR("Set reg: "));
     Serial.println(val);
     toggleRegChanged = 1;
     if (val > (reg->value + 1))
@@ -93,6 +96,7 @@ uint16_t cbToggleChange(TRegister *reg, uint16_t val)
       DEBUG_PRINT(val);
       DEBUG_PRINTLN(PSTR("Old:"));
       DEBUG_PRINT(reg->value);
+      toggleChangeSkips++;
     }
   }
   return val;
@@ -175,8 +179,10 @@ private:
   const int minDelayBetweenStalls = 750;
   const int parlorStopFailureDelay = 750;
   const int exitFWDSafetyDelay = 750;
-  const ulong checkCIPInterval = 1200000;
-  bool CIPUpdated = false;
+  const unsigned long checkCIPInterval = 1200000;
+  const unsigned long sendParlorStatsInterval = 60000;
+  const unsigned long maxHeartbeatInterval = 60000;
+  unsigned long revivalAttemptInterval = 60000;
 
   // stall vars
   const byte initialStall = 27;
@@ -250,6 +256,11 @@ private:
   unsigned long lastFWDSafetyCheck = 0;
   unsigned long lastModbusRead = 0;
   unsigned long lastModbusTask = 0;
+  unsigned long lastSentParlorStats = 0;
+  unsigned long lastHeartbeat = 0;
+  unsigned long lastRevivalAttempt = 0;
+  unsigned long lastParlorStop = 0;
+  unsigned long lastParlorRun = 0;
 
   // parlor vars
   bool stallChange = 0;
@@ -268,6 +279,9 @@ private:
   bool completed = 1;
   bool resetOnNextSwitchRelease = 0;
   bool showRebootStatus = 1;
+  bool startedParlor = 0;
+  bool CIPUpdated = false;
+  bool attemptingRevival = 0;
 
   // parlor stat vars
   int totalFullStalls = 0;
@@ -275,11 +289,15 @@ private:
   int totalFwdSftStops = 0;
   int totalInGroup[10];
   float avgTimePerStall;
-  time_t startTime;
-  time_t endTime;
+  Toki::Time startTime;
+  Toki::Time endTime;
+  Toki::Time firstCow;
+  Toki::Time lastCow;
   bool statsReset = 1;
   int totalStopFailures = 0;
   int totalSafetySwitchTriggers = 0;
+  unsigned long accumStopTime = 0;
+  unsigned long accumRunTime = 0;
 
   // Modbus change tracking
   uint16_t stallCounter = 0;
@@ -334,6 +352,8 @@ private:
   void resetStats();
   void setMode(AutoMode mode);
   void setGroup(byte group);
+  void serializeParlorStats(JsonObject root);
+  void sendParlorStats();
 
 public:
   /**
@@ -418,12 +438,28 @@ public:
 
   void loop()
   {
-    // reboot status indicator
-    static const unsigned long lastReboot = millis();
 
     // if usermod is disabled or called during strip updating just exit
     if (!enabled)
       return;
+
+    // reboot status indicator
+    static const unsigned long lastReboot = millis();
+
+    // set reboot status light
+    if (millis() - lastReboot > rebootLightOnTime && showRebootStatus)
+    {
+      showRebootStatus = 0;
+      setLEDRange(autoStop, black);
+      setLEDRange(stall, black);
+      setLEDRange(cowFWD, black);
+      setLEDRange(spare, black);
+    }
+
+    if (showRebootStatus)
+    {
+      // strip.Show();
+    }
 
     // Modbus TCP
 
@@ -454,22 +490,7 @@ public:
       }
     }
 
-    // set reboot status light
-    if (millis() - lastReboot > rebootLightOnTime && showRebootStatus)
-    {
-      showRebootStatus = 0;
-      setLEDRange(autoStop, black);
-      setLEDRange(stall, black);
-      setLEDRange(cowFWD, black);
-      setLEDRange(spare, black);
-    }
-
-    if (showRebootStatus)
-    {
-      // strip.Show();
-    }
-
-    // set relays
+    // set relays based on set mode
     if (waterChaserMode == chaserOff)
     {
       setRelay(water, 0);
@@ -589,8 +610,6 @@ public:
             if (currentMode == fullAuto)
             {
               statsReset = 0;
-              totalFullStalls += 1;
-              totalInGroup[groupsDone] += 1;
             }
           }
 
@@ -598,6 +617,12 @@ public:
           if (parlorStopRelayState)
           {
             setRelay(parlor, 0);
+            totalFullStalls += 1;
+            if (totalFullStalls == 1)
+            {
+              firstCow = toki.getTime();
+            }
+            totalInGroup[groupsDone] += 1;
           }
         }
       }
@@ -639,6 +664,7 @@ public:
       }
 
       // check if cow forward safety sensor is triggered
+      bool previousCowFWDSafety = cowFWDSafety;
       cowFWDSafety = digitalRead(cowFWDsafetySensorPin);
       lastFWDSafetyCheck = millis();
 
@@ -649,7 +675,10 @@ public:
         {
           setRelay(water, (1));
         }
-        totalFwdSftStops += 1;
+        if (cowFWDSafety != previousCowFWDSafety)
+        {
+          totalFwdSftStops += 1;
+        }
       }
       else
       {
@@ -661,8 +690,23 @@ public:
         }
       }
 
+      if (cowFWDSafety != previousCowFWDSafety)
+      {
+        char exitFWDSftStr[3];
+        snprintf_P(exitFWDSftStr, sizeof(exitFWDSftStr), PSTR("%d"), !cowFWDSafety);
+        publishMqtt(exitFWDSftStr, PSTR("/stat/exitfwdsft"), true);
+      }
+
       // check if cow forward safety switch is triggered
       bool tempCowFWDSafetySwitch = digitalRead(cowFWDsafetySwitchPin);
+      
+       if (cowFWDSafetySwitch != tempCowFWDSafetySwitch)
+      {
+        char FWDSftStr[3];
+        snprintf_P(FWDSftStr, sizeof(FWDSftStr), PSTR("%d"), tempCowFWDSafetySwitch);
+        publishMqtt(FWDSftStr, PSTR("/stat/fwdsft"), true);
+      }
+
       if (tempCowFWDSafetySwitch)
       {
         setLightColor(cowFWD, red);
@@ -684,12 +728,36 @@ public:
       }
 
       // check if parlor is in forward motion
+      bool prevParlorFWD = parlorFWD;
       parlorFWD = digitalRead(parlorFWDPin);
       if (parlorFWD)
       {
       }
       else
       {
+      }
+      if (parlorFWD != prevParlorFWD)
+      {
+        if (!parlorFWD)
+        {
+          endTime = toki.getTime();
+          lastParlorStop = millis();
+          if (lastParlorRun > 0)
+          {
+            accumRunTime += (millis() - lastParlorRun) / 1000;
+          }
+        }
+        else
+        {
+          lastParlorRun = millis();
+          if (lastParlorStop > 0)
+          {
+            accumStopTime += (millis() - lastParlorStop) / 1000;
+          }
+        }
+        char parlorFWDStr[3];
+        snprintf_P(parlorFWDStr, sizeof(parlorFWDStr), PSTR("%d"), parlorFWD);
+        publishMqtt(parlorFWDStr, PSTR("/stat/parlorfwd"), true);
       }
 
       // set milker wash mode on FWD
@@ -723,7 +791,7 @@ public:
       if (parlorWashMode == onFWDNoPrep)
       {
 
-        if (currentMode != prep && parlorFWD)
+        if (parlorFWD && totalFullStalls > 0)
         {
           setRelay(parlorWash, 1);
         }
@@ -747,6 +815,7 @@ public:
       }
       // if (hornMode == stopFailure)
       // {
+
       // parlor stop failure detection from safety switch
       if (millis() - lastCowFWDSafetySwitchNotTriggered > parlorStopFailureDelay && parlorFWD && tempCowFWDSafetySwitch)
       {
@@ -784,8 +853,15 @@ public:
       lastInputRead = millis();
     }
 
+#pragma region Stall Change
     if (stallChange)
     {
+      if (!startedParlor)
+      {
+        startTime = toki.getTime();
+        startedParlor = 1;
+      }
+
       if (!speedMeasured)
       {
         getMedianSpeed();
@@ -821,6 +897,12 @@ public:
             statsReset = 0;
             totalFullStalls += 1;
             totalInGroup[groupsDone] += 1;
+            if (totalFullStalls == 1)
+            {
+              firstCow = toki.getTime();
+            }
+            lastCow = toki.getTime();
+            sendParlorStats();
           }
         }
 
@@ -835,6 +917,7 @@ public:
               setLightColor(stall, red);
               setRelay(parlor, 1);
               totalEmptyStallStops += 1;
+              sendParlorStats();
             }
 
             else
@@ -893,15 +976,15 @@ public:
             setRelay(parlor, 0);
           }
         }
-        DEBUG_PRINT(F("Current Stall: "));
-        DEBUG_PRINTLN(currentStall);
         stallChange = 0;
         char stallStr[3];
         snprintf_P(stallStr, sizeof(stallStr), PSTR("%d"), currentStall);
         publishMqtt(stallStr, PSTR("/stat/stall"), true);
       }
     }
+#pragma endregion Stall Change
 
+#pragma region Status Led
     if (stallChangeStatusLED)
     {
 
@@ -936,12 +1019,43 @@ public:
       }
     }
 
+#pragma endregion Status Led
+
+    // reset stats at appropriate times
     byte hr = hour(localTime);
 
     if (hr == 12 || hr == 0)
     {
       resetStats();
-      currentStall = initialStall;
+    }
+
+    if (millis() - lastSentParlorStats > sendParlorStatsInterval)
+    {
+      sendParlorStats();
+    }
+
+    // connection revival
+    if (millis() - lastHeartbeat > maxHeartbeatInterval)
+    {
+      if (!attemptingRevival)
+      {
+        forceReconnect = 1;
+        attemptingRevival = 1;
+        lastRevivalAttempt = millis();
+      }
+      else
+      {
+        if (millis() - lastRevivalAttempt > revivalAttemptInterval)
+        {
+          forceReconnect = 1;
+          lastRevivalAttempt = millis();
+          revivalAttemptInterval += 120000;
+          if (revivalAttemptInterval > 600000)
+          {
+            doReboot = 1;
+          }
+        }
+      }
     }
   }
 
@@ -1314,6 +1428,17 @@ bool ParlorControl::onMqttMessage(char *topic, char *payload)
     char uptimeStr[12];
     snprintf_P(uptimeStr, sizeof(uptimeStr), PSTR("%lu"), millis());
     publishMqtt(uptimeStr, PSTR("/stat/uptime"), true);
+    if (WLED_MQTT_CONNECTED)
+    {
+      lastHeartbeat = millis();
+      forceReconnect = 0;
+      attemptingRevival = 0;
+      revivalAttemptInterval = 60000;
+    }
+  }
+  else if (strcmp(topic, PSTR("/cmnd/parlorstats")) == 0)
+  {
+    sendParlorStats();
   }
 
   // If none of the topics match, return false
@@ -1354,8 +1479,7 @@ void ParlorControl::publishMqtt(const char *state, const char *topic, bool retai
     DEBUG_PRINTLN(PSTR("MQTT Publishing: "));
     DEBUG_PRINTLN(topic);
     mqtt->publish(subuf, 0, retain, state);
-    DEBUG_PRINTLN(PSTR("MQTT Published "));
-    yield();
+    //yield();
   }
 #endif
 }
@@ -1438,12 +1562,6 @@ void ParlorControl::setLightColor(Light light, RgbColor color)
 
 void ParlorControl::hsvToRgb(byte h, byte s, byte v, byte &r, byte &g, byte &b)
 {
-  DEBUG_PRINTLN(PSTR("hsvToRgb"));
-  DEBUG_PRINT(h);
-  DEBUG_PRINT(PSTR(","));
-  DEBUG_PRINT(s);
-  DEBUG_PRINT(PSTR(","));
-  DEBUG_PRINTLN(v);
   byte i = h / 43;                                    // 43 = 256 / 6 (number of color sextants)
   byte f = (h % 43) * 6;                              // 6 = 256 / 42 (width of each sextant)
   byte p = (v * (255 - s)) >> 8;                      // Equivalent to (v * (255 - s)) / 256
@@ -1487,17 +1605,14 @@ void ParlorControl::hsvToRgb(byte h, byte s, byte v, byte &r, byte &g, byte &b)
 
 RgbColor ParlorControl::generateSpeedColor(float inputValue)
 {
-  DEBUG_PRINTLN(PSTR("Generating Speed Color"));
   int hueValue;
   if (inputValue < speedSetpoint - errorMargin)
   {
     hueValue = 0;
-    DEBUG_PRINTLN(PSTR("<<"));
   }
   else if (inputValue > speedSetpoint + errorMargin)
   {
     hueValue = 170;
-    DEBUG_PRINTLN(PSTR(">>"));
   }
   else
   {
@@ -1506,13 +1621,11 @@ RgbColor ParlorControl::generateSpeedColor(float inputValue)
     {
       // Map the input value to a hue value between 0 (red) and 85 (green)
       hueValue = map(inputValue * 100, ((speedSetpoint - errorMargin) * 100), (speedSetpoint) * 100, 0, 85);
-      DEBUG_PRINTLN(PSTR("<"));
     }
     else
     {
       // Map the input value to a hue value between 86 (green) and 170 (blue)
       hueValue = map(inputValue * 100, speedSetpoint * 100, (speedSetpoint + errorMargin) * 100, 86, 170);
-      DEBUG_PRINTLN(PSTR(">"));
     }
   }
 
@@ -1521,8 +1634,6 @@ RgbColor ParlorControl::generateSpeedColor(float inputValue)
   byte blue;
 
   hsvToRgb(hueValue, 255, 255, red, green, blue);
-  DEBUG_PRINTLN(PSTR("Done generating Speed Color"));
-
   return RgbColor(red, green, blue);
 }
 #pragma endregion LED
@@ -1657,7 +1768,6 @@ void ParlorControl::setRelay(Relays relay, bool state)
 #pragma region Speed Control
 float ParlorControl::round_to_dp(float in_value, int decimal_place)
 {
-  DEBUG_PRINTLN(PSTR("Rounding to DP"));
   float multiplier = powf(10.0f, decimal_place);
   in_value = roundf(in_value * multiplier) / multiplier;
   return in_value;
@@ -1665,8 +1775,6 @@ float ParlorControl::round_to_dp(float in_value, int decimal_place)
 
 void ParlorControl::getMedianSpeed()
 {
-  DEBUG_PRINTLN(PSTR("Getting Median Speed"));
-
   float y = (float(millis()) - float(lastStallChange)) / 1000.00;
   // float x = round_to_dp(y, 2);
   lastStallChange = millis();
@@ -1676,9 +1784,6 @@ void ParlorControl::getMedianSpeed()
   }
 
   speedSamples.add(y);
-  DEBUG_PRINT(PSTR("Current Speed="));
-  DEBUG_PRINTLN(y);
-
   parlorSpeed = speedSamples.getMedian();
   timeToStallCenterPos = (parlorSpeed * 1000) * (1 - stallPosAtStallChange);
 
@@ -1693,10 +1798,6 @@ void ParlorControl::getMedianSpeed()
     timeToStallCenterPos = maxOffsetMS;
   }
 
-  // DEBUG_PRINT("Parlor Speed=");
-  // DEBUG_PRINTLN(parlorSpeed);
-  // DEBUG_PRINT("Time To Stall Center Position="));
-  // DEBUG_PRINTLN(timeToStallCenterPos);
   if (speedLEDEnabled)
   {
     setLightColor(spare, generateSpeedColor(parlorSpeed));
@@ -1707,7 +1808,6 @@ void ParlorControl::getMedianSpeed()
   snprintf_P(speedStr, sizeof(speedStr), PSTR("%.2f"), parlorSpeed);
   publishMqtt(speedStr, PSTR("/stat/speed"), true);
   speedMeasured = 1;
-  DEBUG_PRINTLN(PSTR("Done Getting Median Speed"));
 }
 #pragma endregion Speed Control
 
@@ -1743,7 +1843,6 @@ void ParlorControl::stall_Change()
   }
 
   speedMeasured = 0;
-  DEBUG_PRINTLN(PSTR("Stall Change"));
 }
 #pragma endregion Stall Functions
 
@@ -1756,17 +1855,31 @@ void ParlorControl::resetStats()
     totalFwdSftStops = 0;
     totalStopFailures = 0;
     totalSafetySwitchTriggers = 0;
-    for (size_t i = 0; i < 6; i++)
+    for (size_t i = 0; i < 10; i++)
     {
       totalInGroup[i] = 0;
     }
 
     avgTimePerStall = 0;
-    startTime = time_t(0);
-    endTime = time_t(0);
-    setGroup(0);
+    startTime.sec = 0;
+    endTime.sec = 0;
+    firstCow.sec = 0;
+    lastCow.sec = 0;
+    groupsDone = 0;
     completed = 1;
     statsReset = 1;
+    currentStall = initialStall;
+    startedParlor = 0;
+
+    accumRunTime = 0;
+    accumStopTime = 0;
+    lastParlorRun = 0;
+    lastParlorStop = 0;
+
+    stallChangeSkips = 0;
+    toggleChangeSkips = 0;
+
+    sendParlorStats();
   }
 }
 
@@ -1778,7 +1891,6 @@ void ParlorControl::setMode(AutoMode mode)
 
   if (oldMode != currentMode)
   {
-    DEBUG_PRINTLN(PSTR("Setting Mode"));
     char modeStr[3];
     snprintf_P(modeStr, sizeof(modeStr), PSTR("%d"), currentMode);
     publishMqtt(modeStr, PSTR("/stat/mode"), true);
@@ -1796,6 +1908,66 @@ void ParlorControl::setGroup(byte group)
     snprintf_P(groupStr, sizeof(groupStr), PSTR("%d"), groupsDone);
     publishMqtt(groupStr, PSTR("/stat/group"), true);
   }
+}
+
+void ParlorControl::serializeParlorStats(JsonObject root)
+{
+  root[F("tfs")] = totalFullStalls;
+  root[F("tess")] = totalEmptyStallStops;
+  root[F("tfss")] = totalFwdSftStops;
+  root[F("gd")] = groupsDone;
+  root[F("sr")] = statsReset;
+
+  JsonArray totalInGroupArr = root.createNestedArray(F("tig"));
+  for (int i = 0; i < 10; i++)
+  {
+    if (totalInGroup[i] > 0)
+    {
+      totalInGroupArr.add(totalInGroup[i]);
+    }
+  }
+
+  root[F("atps")] = avgTimePerStall;
+  root[F("st")] = startTime.sec;
+  root[F("et")] = endTime.sec;
+  root[F("fc")] = firstCow.sec;
+  root[F("lc")] = lastCow.sec;
+  root[F("tsf")] = totalStopFailures;
+  root[F("tsst")] = totalSafetySwitchTriggers;
+
+  root[F("art")] = accumRunTime;
+  root[F("ast")] = accumStopTime;
+
+  root[F("scs")] = stallChangeSkips;
+  root[F("tcs")] = toggleChangeSkips;
+}
+
+void ParlorControl::sendParlorStats()
+{
+  char subuf[64];
+  strcpy(subuf, mqttDeviceTopic);
+  strcat(subuf, "/stat/parlorstats");
+
+  // create the JsonDocument
+  StaticJsonDocument<500> doc2;
+
+  // create a variant
+  JsonVariant object = doc2.to<JsonObject>();
+
+  // serialize the object and send the result to Serial
+  serializeParlorStats(object);
+
+  // serialize the object and send the result to Serial
+  // serializeJsonPretty(doc2, Serial);
+
+  // size_t size = measureJson(doc2.as<JsonObject>());
+  //  DEBUG_PRINT("JSON size: ");
+  //  DEBUG_PRINTLN(size);
+
+  char payload[500];
+  serializeJson(doc2, payload);
+  mqtt->publish(subuf, 0, false, payload);
+  lastSentParlorStats = millis();
 }
 
 #pragma endregion Class Methods

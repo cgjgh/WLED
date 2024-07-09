@@ -190,11 +190,11 @@ void onMqttMessage(char* topic, char* payload, AsyncMqttClientMessageProperties 
     }
 
     // serialize the object and send the result to Serial
-    serializeJson(doc2, Serial);
+    //serializeJson(doc2, Serial);
 
     size_t size = measureJson(doc2.as<JsonObject>());
-    DEBUG_PRINT("JSON size: ");
-    DEBUG_PRINTLN(size);
+    // DEBUG_PRINT("JSON size: ");
+    // DEBUG_PRINTLN(size);
     char payload[800];
     serializeJson(doc2, payload);
     mqtt->publish(subuf, 0, false, payload);
