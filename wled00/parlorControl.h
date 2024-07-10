@@ -1422,6 +1422,12 @@ bool ParlorControl::onMqttMessage(char *topic, char *payload)
     publishMqtt(ropeStr, PSTR("/stat/ropeswitch"), true);
     mb.Hreg(ropeReg, ropeSwitchCounter);
   }
+  else if (strcmp(topic, PSTR("/cmnd/parlorfwd")) == 0)
+  {
+    char parlorFWDStr[5];
+    snprintf_P(parlorFWDStr, sizeof(parlorFWDStr), PSTR("%d"), parlorFWD);
+    publishMqtt(parlorFWDStr, PSTR("/stat/parlorfwd"), true);
+  }
   else if (strcmp(topic, PSTR("/cmnd/uptime")) == 0)
   {
     // This topic only publishes the current mode, no confirmation needed.
