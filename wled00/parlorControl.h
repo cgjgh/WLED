@@ -282,6 +282,7 @@ private:
   bool startedParlor = 0;
   bool CIPUpdated = false;
   bool attemptingRevival = 0;
+  bool stoppedOnEmptyStall = 0;
 
   // parlor stat vars
   int totalFullStalls = 0;
@@ -699,8 +700,8 @@ public:
 
       // check if cow forward safety switch is triggered
       bool tempCowFWDSafetySwitch = digitalRead(cowFWDsafetySwitchPin);
-      
-       if (cowFWDSafetySwitch != tempCowFWDSafetySwitch)
+
+      if (cowFWDSafetySwitch != tempCowFWDSafetySwitch)
       {
         char FWDSftStr[3];
         snprintf_P(FWDSftStr, sizeof(FWDSftStr), PSTR("%d"), tempCowFWDSafetySwitch);
@@ -917,6 +918,10 @@ public:
               setLightColor(stall, red);
               setRelay(parlor, 1);
               totalEmptyStallStops += 1;
+              stoppedOnEmptyStall = 1;
+              char stallEmptyStr[3];
+              snprintf_P(stallEmptyStr, sizeof(stallEmptyStr), PSTR("%d"), stoppedOnEmptyStall);
+              publishMqtt(stallEmptyStr, PSTR("/stat/stallempty"), true);
               sendParlorStats();
             }
 
@@ -1485,7 +1490,7 @@ void ParlorControl::publishMqtt(const char *state, const char *topic, bool retai
     DEBUG_PRINTLN(PSTR("MQTT Publishing: "));
     DEBUG_PRINTLN(topic);
     mqtt->publish(subuf, 0, retain, state);
-    //yield();
+    // yield();
   }
 #endif
 }
@@ -1659,6 +1664,13 @@ void ParlorControl::setRelay(Relays relay, bool state)
 
       digitalWrite(parlorPauseRelayPin, HIGH);
       parlorStopRelayState = 1;
+      if (stoppedOnEmptyStall)
+      {
+        stoppedOnEmptyStall = 0;
+        char stallEmptyStr[3];
+        snprintf_P(stallEmptyStr, sizeof(stallEmptyStr), PSTR("%d"), stoppedOnEmptyStall);
+        publishMqtt(stallEmptyStr, PSTR("/stat/stallempty"), true);
+      }
       lastParlorStopRelayTriggered = millis();
     }
     else if (state == 0 && parlorStopRelayState == 1)
