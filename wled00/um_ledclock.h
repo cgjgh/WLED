@@ -518,7 +518,7 @@ private:
 
     Timer selfTestTimer;
     uint8_t selfTestCycle = 0;
-    uint8_t selfTestIdx = 0;
+    uint16_t selfTestIdx = 0;
     bool selfTestDone = false;
 
     uint32_t* backup = 0;
@@ -554,7 +554,7 @@ public:
         dMinutesO(&outputPixel, LC_LEDS_PER_SEGM),
         display(5, &dHoursT, &dHoursO, &sep, &dMinutesT, &dMinutesO),
         beeper(0, BUZZER_PIN),
-        selfTestTimer(10),
+        selfTestTimer(2),
         stopwatchTimer(0),
         timerTimer(0) {}
 
@@ -1076,7 +1076,7 @@ public:
             backupStrip();
 
             if (canvasColor && blendingMode > BlendingMode::Normal) { 
-                for (uint8_t i = 0, n = busses.getTotalLength(); i < n; ++i) {
+                for (uint16_t i = 0, n = busses.getTotalLength(); i < n; ++i) {
                     CRGB rgb = CRGB(busses.getPixelColor(i));
                     switch (blendingMode) {
                     case Lighten:
@@ -1110,7 +1110,7 @@ public:
                 stateUpdated(CALL_MODE_DIRECT_CHANGE);
             }
         } else {
-            for (uint8_t i = 0, n = busses.getTotalLength(); i < n; ++i) {
+            for (uint16_t i = 0, n = busses.getTotalLength(); i < n; ++i) {
                 CRGB color = i <= selfTestIdx
                     ? selfTestColors[selfTestCycle]
                     : (selfTestCycle > 0
