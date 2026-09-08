@@ -1433,6 +1433,12 @@ bool ParlorControl::onMqttMessage(char *topic, char *payload)
     snprintf_P(parlorFWDStr, sizeof(parlorFWDStr), PSTR("%d"), parlorFWD);
     publishMqtt(parlorFWDStr, PSTR("/stat/parlorfwd"), true);
   }
+  else if (strcmp(topic, PSTR("/cmnd/stallempty")) == 0)
+  {
+    char stallEmptyStr[3];
+    snprintf_P(stallEmptyStr, sizeof(stallEmptyStr), PSTR("%d"), stoppedOnEmptyStall);
+    publishMqtt(stallEmptyStr, PSTR("/stat/stallempty"), true);
+  }
   else if (strcmp(topic, PSTR("/cmnd/uptime")) == 0)
   {
     // This topic only publishes the current mode, no confirmation needed.
